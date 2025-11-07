@@ -7,7 +7,8 @@ const connectDB = async () => {
   try {
     if (cachedConn) return cachedConn;
 
-    const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/farm-to-fork';
+    // Prefer env var; fall back to Atlas URI for production reliability
+    const uri = process.env.MONGO_URI || 'mongodb+srv://aakankshamore2805_db_user:farmtofork@cluster0.wh5gwdo.mongodb.net/farm-to-fork?retryWrites=true&w=majority&appName=Cluster0';
 
     // Connect once and cache; avoid process.exit in serverless
     const conn = await mongoose.connect(uri);
