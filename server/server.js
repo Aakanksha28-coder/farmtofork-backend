@@ -43,6 +43,11 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors());
 
+// Lightweight POST ping to verify serverless POST handling
+app.post('/api/ping', (req, res) => {
+  res.json({ ok: true, method: 'POST', body: req.body || null });
+});
+
 // Static uploads
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
