@@ -1,33 +1,39 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const connectDB = require('./config/db');
 const morgan = require('morgan');
+const connectDB = require('./config/db');
 
 // Load env vars
 dotenv.config();
 
-// Connect to database
+// Connect to Database
 connectDB();
 
-// Ensure a single admin user exists based on environment credentials
 const User = require('./models/User');
+
+// Ensure an admin exists
 (async function ensureAdmin() {
   try {
     const email = process.env.ADMIN_EMAIL;
     const password = process.env.ADMIN_PASSWORD;
     const name = process.env.ADMIN_NAME || 'Administrator';
+
     if (!email || !password) {
       console.log('ADMIN_EMAIL/ADMIN_PASSWORD not set; skipping admin seeding');
       return;
     }
+
     const existingAdmin = await User.findOne({ role: 'admin' });
+
     if (existingAdmin) {
       console.log('Admin user already exists:', existingAdmin.email);
       return;
     }
+
     const admin = await User.create({ name, email, password, role: 'admin' });
-    console.log('Admin user created:', admin.email);
+    console.log('✅ Admin user created:', admin.email);
+
   } catch (err) {
     console.error('Admin seeding error:', err.message);
   }
@@ -35,40 +41,42 @@ const User = require('./models/User');
 
 const app = express();
 
-// Disable ETag to avoid cached JSON issues
-app.set('etag', false);
-
 // Middleware
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(cors());
 
-// POST ping route
-app.post('/api/ping', (req, res) => {
-  res.json({ ok: true, method: 'POST', body: req.body || null });
+// ✅ Updated CORS setup
+app.use(cors({
+  origin: [
+    "https://farmtofork-frontend.onrender.com", // Render Frontend
+    "http://localhost:3000",                     // Local Dev
+    "https://farmtofork-backend-2.onrender.com"  // Render Backend (self)
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+// ❗ Extra safety CORS header
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  next();
 });
 
-// Static Upload Handling
+// Handle file uploads folder
 const path = require('path');
 const fs = require('fs');
 
 const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID;
 const uploadsDir = isRender
-  ? path.join('/tmp', 'uploads')   // Render temporary storage
+  ? path.join('/tmp', 'uploads')
   : path.join(__dirname, 'uploads');
 
-// Ensure uploads directory exists
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve static uploads
-app.use('/uploads', express.static(uploadsDir, {
-  setHeaders: (res) => {
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Cache-Control', 'public, max-age=31536000');
-  }
-}));
+app.use('/uploads', express.static(uploadsDir));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -79,31 +87,23 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/market', require('./routes/marketRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 
-// Root
+// Health check
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.send('✅ FarmToFork Backend is Running');
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-
-  const multer = require('multer');
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ message: err.message || 'File upload error' });
-  }
-
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error'
-  });
+  console.error('Global error:', err);
+  res.status(err.status || 500).json({ message: err.message || 'Internal Server Error' });
 });
 
 // 404
 app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: 'Route Not Found' });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+module.exports = app;
