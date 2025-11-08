@@ -70,9 +70,6 @@ app.use(cors({
   exposedHeaders: ["Content-Range", "X-Content-Range"]
 }));
 
-// Handle preflight requests
-app.options('*', cors());
-
 // Handle file uploads folder
 const path = require('path');
 const fs = require('fs');
