@@ -16,9 +16,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Use /tmp for Vercel serverless (read-write), otherwise use uploads directory
+// Use /tmp for Render/Vercel serverless (read-write), otherwise use uploads directory
+const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID;
 const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
-const uploadsDir = isVercel 
+const uploadsDir = (isRender || isVercel)
   ? path.join('/tmp', 'uploads')
   : path.join(__dirname, '../uploads');
 

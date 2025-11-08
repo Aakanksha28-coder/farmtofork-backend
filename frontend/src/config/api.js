@@ -1,6 +1,6 @@
 // Centralized API base configuration
 // Priority: use REACT_APP_API_BASE_URL if provided.
-// Fallbacks: localhost for dev, production-safe default for Vercel, else relative "/api".
+// Fallbacks: localhost for dev, production backend on Render, else relative "/api".
 
 const envBase = process.env.REACT_APP_API_BASE_URL;
 let API_BASE_URL;
@@ -11,11 +11,9 @@ if (envBase && typeof envBase === 'string' && envBase.trim()) {
   API_BASE_URL = 'http://localhost:5000/api';
 } else if (typeof window !== 'undefined') {
   const host = window.location.hostname;
-  const isVercelHost = host.endsWith('vercel.app');
-  const isFrontendProd = host.includes('farmtofork-frontend.vercel.app') || isVercelHost;
-  if (isFrontendProd) {
-    // Default to deployed backend on Vercel when env var is missing
-    API_BASE_URL = 'https://farmtofork-backend.vercel.app/api';
+  // Use Render backend for production
+  if (host.includes('onrender.com') || host.includes('farmtofork-frontend')) {
+    API_BASE_URL = 'https://farmtofork-backend-2.onrender.com/api';
   } else {
     // When frontend and backend share the same domain (e.g., via platform routing),
     // relative "/api" works without hardcoding a separate host.

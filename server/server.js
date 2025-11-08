@@ -45,23 +45,33 @@ const app = express();
 app.use(morgan('dev'));
 app.use(express.json());
 
-// ✅ Updated CORS setup
+// ✅ Updated CORS setup - Allow all origins for maximum compatibility
 app.use(cors({
-  origin: [
-    "https://farmtofork-frontend.onrender.com", // Render Frontend
-    "http://localhost:3000",                     // Local Dev
-    "https://farmtofork-backend-2.onrender.com"  // Render Backend (self)
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      "https://farmtofork-frontend.onrender.com",
+      "http://localhost:3000",
+      "https://farmtofork-backend-2.onrender.com",
+      
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all origins in production for now
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Range", "X-Content-Range"]
 }));
 
-// ❗ Extra safety CORS header
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  next();
-});
+// Handle preflight requests
+app.options('*', cors());
 
 // Handle file uploads folder
 const path = require('path');
