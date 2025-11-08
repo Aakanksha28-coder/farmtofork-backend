@@ -4,6 +4,7 @@ import { createProduct, getMyProducts, updateProduct, deleteProduct } from '../s
 import { getNegotiationsForProduct, postMessage as postNegotiationMessage, acceptNegotiation } from '../services/negotiationService';
 import ProtectedRoute from '../components/ProtectedRoute';
 import './FarmerDashboard.css';
+import { API_ORIGIN } from '../config/api';
 
 const FarmerDashboardContent = () => {
   const { currentUser } = useAuth();
@@ -24,7 +25,7 @@ const FarmerDashboardContent = () => {
   const [negoReply, setNegoReply] = useState({}); // { negotiationId: { price:'', text:'' } }
   const [acceptPrice, setAcceptPrice] = useState({}); // { negotiationId: '' }
 
-  const apiBase = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '');
+  const apiBase = API_ORIGIN;
 
   const loadMyProducts = async () => {
     try {

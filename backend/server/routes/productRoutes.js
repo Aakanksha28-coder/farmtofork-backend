@@ -14,8 +14,22 @@ const {
 // Multer setup for image upload
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
+  destination: (req, file, cb) => {
+    // Ensure directory exists before saving
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir);
+  },
   filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-]/g, '_');
     cb(null, Date.now() + '-' + safeName);

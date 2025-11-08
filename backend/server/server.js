@@ -43,9 +43,28 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors());
 
+// Lightweight POST ping to verify serverless POST handling
+app.post('/api/ping', (req, res) => {
+  res.json({ ok: true, method: 'POST', body: req.body || null });
+});
+
 // Static uploads
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const fs = require('fs');
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static uploads with proper CORS headers
+app.use('/uploads', express.static(uploadsDir, {
+  setHeaders: (res, filePath) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Cache-Control', 'public, max-age=31536000');
+  }
+}));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

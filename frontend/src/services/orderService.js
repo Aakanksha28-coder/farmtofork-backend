@@ -1,4 +1,4 @@
-const BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
+import { API_BASE_URL as BASE_URL } from '../config/api';
 const API_URL = `${BASE_URL}/orders`;
 
 const handleResponse = async (response) => {

@@ -18,7 +18,7 @@ const stories = [
     title: 'From Surplus to Stable Income',
     role: 'Farmer',
     name: 'Ramesh Kumar',
-    location: 'Nashik, Maharashtra',
+    location: 'Kolhapur, Maharashtra',
     image: getRoleImage('Farmer', 0),
     quote: 'Listing directly helped me sell fresh produce the same day, reducing waste and ensuring a fair price.',
     stats: ['+22% income', '0 middlemen', 'Same-day sales']
@@ -27,7 +27,7 @@ const stories = [
     title: 'Traceable Produce for My Family',
     role: 'Customer',
     name: 'Anita Sharma',
-    location: 'Bengaluru, Karnataka',
+    location: 'Kolhapur,Maharashtra',
     image: getRoleImage('Customer', 0),
     quote: 'I can see which farm my vegetables come from and choose seasonal items for better taste.',
     stats: ['100% traceable', 'Seasonal picks', 'Weekly basket']
@@ -36,7 +36,7 @@ const stories = [
     title: 'Negotiation Built on Trust',
     role: 'Farmer',
     name: 'Sita Devi',
-    location: 'Jaipur, Rajasthan',
+    location: 'Sangli, Maharashtra',
     image: getRoleImage('Farmer', 1),
     quote: 'Buyers respect the effort that goes into farming. Negotiation helps us meet halfway.',
     stats: ['Fair pricing', 'Repeat buyers', 'Transparent deals']
@@ -45,7 +45,7 @@ const stories = [
     title: 'Freshness I Can Taste',
     role: 'Customer',
     name: 'Rahul Verma',
-    location: 'Pune, Maharashtra',
+    location: 'Satara, Maharashtra',
     image: getRoleImage('Customer', 1),
     quote: 'Produce arrives within 24 hours of harvest. The quality is unmatched.',
     stats: ['24h harvest-to-home', 'Local growers', 'Less waste']
@@ -54,7 +54,7 @@ const stories = [
     title: 'Better Planning with Pre-Orders',
     role: 'Farmer',
     name: 'Arjun Singh',
-    location: 'Varanasi, UP',
+    location: 'Sangli, Maharashtra',
     image: getRoleImage('Farmer', 2),
     quote: 'Pre-orders help me plan harvests accurately and avoid overproduction.',
     stats: ['Demand insights', 'Less spoilage', 'Stable cashflow']
@@ -63,7 +63,7 @@ const stories = [
     title: 'Community Impact You Can See',
     role: 'Customer',
     name: 'Meera Joshi',
-    location: 'Mumbai, Maharashtra',
+    location: 'Sindudurg, Maharashtra',
     image: getRoleImage('Customer', 2),
     quote: 'It feels good to know my purchase directly supports small-scale farmers near my city.',
     stats: ['Local support', 'Fair trade', 'Sustainability']
@@ -72,7 +72,7 @@ const stories = [
     title: 'Sustainable Practices Pay Off',
     role: 'Farmer',
     name: 'Karthik P',
-    location: 'Coimbatore, Tamil Nadu',
+    location: 'Satara, Maharashtra',
     image: getRoleImage('Farmer', 3),
     quote: 'Organic methods and direct sales help me maintain quality and get rewarded for it.',
     stats: ['Organic methods', 'Premium price', 'Loyal customers']
@@ -81,7 +81,7 @@ const stories = [
     title: 'Seasonal Boxes for My Kitchen',
     role: 'Customer',
     name: 'Nidhi Patel',
-    location: 'Ahmedabad, Gujarat',
+    location: 'Pune, Maharashtra',
     image: getRoleImage('Customer', 3),
     quote: 'The seasonal box variety keeps our meals exciting and healthy.',
     stats: ['Curated variety', 'Budget friendly', 'Family favorite']
@@ -90,7 +90,7 @@ const stories = [
     title: 'Upcoming Crops, Guaranteed Buyers',
     role: 'Farmer',
     name: 'Devendra',
-    location: 'Indore, MP',
+    location: 'Satara, Maharashtra',
     image: getRoleImage('Farmer', 4),
     quote: 'Listing upcoming harvests lets customers pre-book. It reduces risk and ensures demand.',
     stats: ['Pre-booked', 'Lower risk', 'Planned logistics']

@@ -6,6 +6,7 @@ import { useCart } from '../contexts/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Toast from './Toast';
+import { API_ORIGIN } from '../config/api';
 
 const Products = () => {
   const [available, setAvailable] = useState([]);
@@ -58,6 +59,8 @@ const Products = () => {
     setToastOpen(true);
   };
 
+  const origin = API_ORIGIN;
+
   return (
     <div className="products-section">
       <div className="container">
@@ -81,7 +84,7 @@ const Products = () => {
                 <div key={product._id} className="product-card">
                   <div className="product-image">
                     <img 
-                      src={product.imageUrl ? `${(process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api').replace('/api','')}${product.imageUrl}` : 'https://images.unsplash.com/photo-1524592157393-88fb3ef00d81?w=800&q=80&auto=format&fit=crop'} 
+                      src={product.imageUrl ? `${origin}${product.imageUrl}` : 'https://images.unsplash.com/photo-1524592157393-88fb3ef00d81?w=800&q=80&auto=format&fit=crop'} 
                       alt={product.name} 
                     />
                   </div>
@@ -117,7 +120,7 @@ const Products = () => {
                 <div key={product._id} className="product-card">
                   <div className="product-image">
                     <img 
-                      src={product.imageUrl ? `${(process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api').replace('/api','')}${product.imageUrl}` : 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=800&q=80&auto=format&fit=crop'} 
+                      src={product.imageUrl ? `${origin}${product.imageUrl}` : 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=800&q=80&auto=format&fit=crop'} 
                       alt={product.name} 
                     />
                   </div>

@@ -6,6 +6,7 @@ import './ProductsPage.css';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
+import { API_ORIGIN } from '../config/api';
 
 const ProductsPage = () => {
   const { addItem } = useCart();
@@ -81,7 +82,7 @@ const ProductsPage = () => {
     return list;
   }, [products, search, unit, upcomingOnly, minPrice, maxPrice, sortBy]);
 
-  const apiBase = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api').replace('/api','');
+  const apiBase = API_ORIGIN;
 
   const handleNegotiate = (product) => {
     if (!isAuthenticated || currentUser?.role !== 'customer') {
