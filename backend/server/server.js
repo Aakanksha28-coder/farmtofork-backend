@@ -85,6 +85,33 @@ app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
+// Global error handler - must be after all routes
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
+  
+  // Multer errors
+  if (err instanceof require('multer').MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File too large. Maximum size is 5MB' });
+    }
+    return res.status(400).json({ message: err.message || 'File upload error' });
+  }
+  
+  // Other errors
+  const statusCode = err.statusCode || err.status || 500;
+  const message = err.message || 'Internal Server Error';
+  
+  res.status(statusCode).json({ 
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,7 +1,7 @@
 const Product = require('../models/Product');
 
 // Create a product (farmer only)
-exports.createProduct = async (req, res) => {
+exports.createProduct = async (req, res, next) => {
   try {
     // Ensure database connection
     const connectDB = require('../config/db');
@@ -11,37 +11,37 @@ exports.createProduct = async (req, res) => {
       return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
+    // Validate required fields
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate } = req.body;
     
-    // Handle image URL - use full URL for Vercel, relative path for local
+    if (!name || !price || !quantity) {
+      return res.status(400).json({ message: 'Name, price, and quantity are required' });
+    }
+
+    // Handle image URL
     let imageUrl = undefined;
     if (req.file) {
-      const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
-      if (isVercel) {
-        // For Vercel, we need to use the full URL or handle differently
-        // Since /tmp is ephemeral, we'll store the filename and serve from /tmp/uploads
-        imageUrl = `/uploads/${req.file.filename}`;
-      } else {
-        imageUrl = `/uploads/${req.file.filename}`;
-      }
+      imageUrl = `/uploads/${req.file.filename}`;
     }
     
     const product = await Product.create({
-      name,
-      description,
+      name: String(name).trim(),
+      description: description ? String(description).trim() : undefined,
       price: Number(price),
       quantity: Number(quantity),
-      unit,
-      offer,
+      unit: unit || 'kg',
+      offer: offer ? String(offer).trim() : undefined,
       imageUrl,
-      isUpcoming: !!isUpcoming,
+      isUpcoming: isUpcoming === 'true' || isUpcoming === true,
       availableDate: availableDate ? new Date(availableDate) : undefined,
       farmer: req.user._id
     });
+    
     res.status(201).json(product);
   } catch (error) {
     console.error('Create product error:', error);
-    res.status(400).json({ message: error.message || 'Failed to create product' });
+    // Pass error to global error handler
+    next(error);
   }
 };
 

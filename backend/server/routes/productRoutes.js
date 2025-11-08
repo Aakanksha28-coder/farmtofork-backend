@@ -60,6 +60,10 @@ const handleMulterError = (err, req, res, next) => {
     return res.status(400).json({ message: err.message || 'File upload error' });
   }
   if (err) {
+    // Handle file filter errors
+    if (err.message && err.message.includes('Only JPG')) {
+      return res.status(400).json({ message: err.message });
+    }
     return res.status(400).json({ message: err.message || 'File upload error' });
   }
   next();
@@ -71,7 +75,7 @@ router.get('/', getProducts);
 router.get('/mine', protect, authorizeRoles('farmer'), getMyProducts);
 router.get('/:id', getProductById);
 
-// Farmer-only operations
+// Farmer-only operations - multer error handler must come after upload middleware
 router.post('/', protect, authorizeRoles('farmer'), upload.single('image'), handleMulterError, createProduct);
 router.put('/:id', protect, authorizeRoles('farmer'), upload.single('image'), handleMulterError, updateProduct);
 router.delete('/:id', protect, authorizeRoles('farmer'), deleteProduct);
