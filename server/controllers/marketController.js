@@ -3,6 +3,13 @@ const MarketPrice = require('../models/MarketPrice');
 // Upload or update market price (simple upsert by productName)
 exports.uploadPrice = async (req, res) => {
   try {
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
     const { productName, category, unit = 'kg', price, source } = req.body;
     if (!productName || !price) return res.status(400).json({ message: 'productName and price required' });
 
@@ -10,13 +17,20 @@ exports.uploadPrice = async (req, res) => {
     res.status(201).json(mp);
   } catch (error) {
     console.error('Upload price error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
 // Latest price by productName
 exports.getLatestPrice = async (req, res) => {
   try {
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
     const { product } = req.query;
     if (!product) return res.status(400).json({ message: 'product query required' });
     const mp = await MarketPrice.findOne({ productName: product }).sort({ recordedAt: -1, createdAt: -1 });
@@ -24,20 +38,27 @@ exports.getLatestPrice = async (req, res) => {
     res.json(mp);
   } catch (error) {
     console.error('Get latest price error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
 // List recent prices (optionally filter by category)
 exports.listPrices = async (req, res) => {
   try {
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
     const { category } = req.query;
     const q = category ? { category } : {};
     const items = await MarketPrice.find(q).sort({ recordedAt: -1, createdAt: -1 }).limit(50);
-    res.json(items);
+    res.json(items || []);
   } catch (error) {
     console.error('List prices error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 

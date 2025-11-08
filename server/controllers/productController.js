@@ -32,31 +32,55 @@ exports.getProducts = async (req, res) => {
     if (upcoming === 'false') query.isUpcoming = false;
     if (mine === 'true' && req.user) query.farmer = req.user._id;
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
-    res.json(products);
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
+    const products = await Product.find(query).populate('farmer', 'name email').sort({ createdAt: -1 });
+    res.json(products || []);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get products error:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch products' });
   }
 };
 
 exports.getMyProducts = async (req, res) => {
   try {
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
     // Query products directly by the authenticated farmer
-    const products = await Product.find({ farmer: req.user._id }).sort({ createdAt: -1 });
-    res.json(products);
+    const products = await Product.find({ farmer: req.user._id }).populate('farmer', 'name email').sort({ createdAt: -1 });
+    res.json(products || []);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get my products error:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch products' });
   }
 };
 
 // Get single product
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    // Check if database connection exists
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database not connected');
+      return res.status(503).json({ message: 'Database connection not available' });
+    }
+
+    const product = await Product.findById(req.params.id).populate('farmer', 'name email');
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Get product by ID error:', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch product' });
   }
 };
 
