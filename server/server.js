@@ -35,7 +35,7 @@ const User = require('./models/User');
 
 const app = express();
 
-// Disable ETag to avoid 304 responses that break JSON parsing
+// Disable ETag to avoid cached JSON issues
 app.set('etag', false);
 
 // Middleware
@@ -43,24 +43,28 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors());
 
-// Lightweight POST ping to verify serverless POST handling
+// POST ping route
 app.post('/api/ping', (req, res) => {
   res.json({ ok: true, method: 'POST', body: req.body || null });
 });
 
-// Static uploads
+// Static Upload Handling
 const path = require('path');
 const fs = require('fs');
 
+const isRender = process.env.RENDER || process.env.RENDER_SERVICE_ID;
+const uploadsDir = isRender
+  ? path.join('/tmp', 'uploads')   // Render temporary storage
+  : path.join(__dirname, 'uploads');
+
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve static uploads with proper CORS headers
+// Serve static uploads
 app.use('/uploads', express.static(uploadsDir, {
-  setHeaders: (res, filePath) => {
+  setHeaders: (res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Cache-Control', 'public, max-age=31536000');
   }
@@ -75,13 +79,31 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/market', require('./routes/marketRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
 
-// Default route
+// Root
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-// Start server
-const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Global error handler:', err);
 
-module.exports = app;
+  const multer = require('multer');
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message || 'File upload error' });
+  }
+
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error'
+  });
+});
+
+// 404
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});

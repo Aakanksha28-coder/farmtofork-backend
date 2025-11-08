@@ -3,11 +3,12 @@ const MarketPrice = require('../models/MarketPrice');
 // Upload or update market price (simple upsert by productName)
 exports.uploadPrice = async (req, res) => {
   try {
-    // Check if database connection exists
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+    // Ensure database connection
+    const connectDB = require('../config/db');
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { productName, category, unit = 'kg', price, source } = req.body;
@@ -24,11 +25,12 @@ exports.uploadPrice = async (req, res) => {
 // Latest price by productName
 exports.getLatestPrice = async (req, res) => {
   try {
-    // Check if database connection exists
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+    // Ensure database connection
+    const connectDB = require('../config/db');
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { product } = req.query;
@@ -45,11 +47,12 @@ exports.getLatestPrice = async (req, res) => {
 // List recent prices (optionally filter by category)
 exports.listPrices = async (req, res) => {
   try {
-    // Check if database connection exists
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+    // Ensure database connection
+    const connectDB = require('../config/db');
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { category } = req.query;
