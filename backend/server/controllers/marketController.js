@@ -4,10 +4,11 @@ const MarketPrice = require('../models/MarketPrice');
 exports.uploadPrice = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { productName, category, unit = 'kg', price, source } = req.body;
@@ -25,10 +26,11 @@ exports.uploadPrice = async (req, res) => {
 exports.getLatestPrice = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { product } = req.query;
@@ -46,10 +48,11 @@ exports.getLatestPrice = async (req, res) => {
 exports.listPrices = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { category } = req.query;

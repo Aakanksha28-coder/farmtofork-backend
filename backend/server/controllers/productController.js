@@ -4,10 +4,11 @@ const Product = require('../models/Product');
 exports.createProduct = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate } = req.body;
@@ -35,10 +36,11 @@ exports.createProduct = async (req, res) => {
 exports.getProducts = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { upcoming, mine } = req.query;
@@ -58,10 +60,11 @@ exports.getProducts = async (req, res) => {
 exports.getMyProducts = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     // Query products directly by the authenticated farmer
@@ -77,10 +80,11 @@ exports.getMyProducts = async (req, res) => {
 exports.getProductById = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const product = await Product.findById(req.params.id).populate('farmer', 'name email');
@@ -96,10 +100,11 @@ exports.getProductById = async (req, res) => {
 exports.updateProduct = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const product = await Product.findById(req.params.id);
@@ -129,10 +134,11 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const product = await Product.findById(req.params.id);

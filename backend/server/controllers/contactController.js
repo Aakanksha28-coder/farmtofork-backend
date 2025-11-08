@@ -19,10 +19,11 @@ const tryDecodeUser = (req) => {
 exports.createMessage = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { name, email, phone, subject, message, role } = req.body;
@@ -52,10 +53,11 @@ exports.createMessage = async (req, res) => {
 exports.listMessages = async (req, res) => {
   try {
     // Ensure database connection
-    const mongoose = require('mongoose');
     const connectDB = require('../config/db');
-    if (mongoose.connection.readyState !== 1) {
-      await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      console.error('Database connection failed');
+      return res.status(500).json({ message: 'Database connection unavailable' });
     }
 
     const { role, status, q } = req.query;
