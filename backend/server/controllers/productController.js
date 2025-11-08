@@ -12,7 +12,20 @@ exports.createProduct = async (req, res) => {
     }
 
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+    
+    // Handle image URL - use full URL for Vercel, relative path for local
+    let imageUrl = undefined;
+    if (req.file) {
+      const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+      if (isVercel) {
+        // For Vercel, we need to use the full URL or handle differently
+        // Since /tmp is ephemeral, we'll store the filename and serve from /tmp/uploads
+        imageUrl = `/uploads/${req.file.filename}`;
+      } else {
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+    }
+    
     const product = await Product.create({
       name,
       description,
@@ -118,6 +131,7 @@ exports.updateProduct = async (req, res) => {
       if (req.body[f] !== undefined) product[f] = req.body[f];
     });
 
+    // Handle image update
     if (req.file) {
       product.imageUrl = `/uploads/${req.file.filename}`;
     }

@@ -52,8 +52,13 @@ app.post('/api/ping', (req, res) => {
 const path = require('path');
 const fs = require('fs');
 
+// Use /tmp for Vercel serverless (read-write), otherwise use uploads directory
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+const uploadsDir = isVercel 
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, 'uploads');
+
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }

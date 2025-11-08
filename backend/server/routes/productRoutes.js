@@ -16,8 +16,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+// Use /tmp for Vercel serverless (read-write), otherwise use uploads directory
+const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
+const uploadsDir = isVercel 
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '../uploads');
+
 // Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -40,7 +45,25 @@ const imageFilter = (req, file, cb) => {
   if (allowed.includes(file.mimetype)) cb(null, true);
   else cb(new Error('Only JPG, PNG, WEBP images allowed'));
 };
-const upload = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({ 
+  storage, 
+  fileFilter: imageFilter, 
+  limits: { fileSize: 5 * 1024 * 1024 } 
+});
+
+// Multer error handling middleware
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File too large. Maximum size is 5MB' });
+    }
+    return res.status(400).json({ message: err.message || 'File upload error' });
+  }
+  if (err) {
+    return res.status(400).json({ message: err.message || 'File upload error' });
+  }
+  next();
+};
 
 // Public: list products and upcoming
 router.get('/', getProducts);
@@ -49,8 +72,8 @@ router.get('/mine', protect, authorizeRoles('farmer'), getMyProducts);
 router.get('/:id', getProductById);
 
 // Farmer-only operations
-router.post('/', protect, authorizeRoles('farmer'), upload.single('image'), createProduct);
-router.put('/:id', protect, authorizeRoles('farmer'), upload.single('image'), updateProduct);
+router.post('/', protect, authorizeRoles('farmer'), upload.single('image'), handleMulterError, createProduct);
+router.put('/:id', protect, authorizeRoles('farmer'), upload.single('image'), handleMulterError, updateProduct);
 router.delete('/:id', protect, authorizeRoles('farmer'), deleteProduct);
 
 module.exports = router;
