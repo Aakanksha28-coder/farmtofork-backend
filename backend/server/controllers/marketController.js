@@ -3,11 +3,11 @@ const MarketPrice = require('../models/MarketPrice');
 // Upload or update market price (simple upsert by productName)
 exports.uploadPrice = async (req, res) => {
   try {
-    // Check if database connection exists
+    // Ensure database connection
     const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
     if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+      await connectDB();
     }
 
     const { productName, category, unit = 'kg', price, source } = req.body;
@@ -24,11 +24,11 @@ exports.uploadPrice = async (req, res) => {
 // Latest price by productName
 exports.getLatestPrice = async (req, res) => {
   try {
-    // Check if database connection exists
+    // Ensure database connection
     const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
     if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+      await connectDB();
     }
 
     const { product } = req.query;
@@ -45,11 +45,11 @@ exports.getLatestPrice = async (req, res) => {
 // List recent prices (optionally filter by category)
 exports.listPrices = async (req, res) => {
   try {
-    // Check if database connection exists
+    // Ensure database connection
     const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
     if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+      await connectDB();
     }
 
     const { category } = req.query;

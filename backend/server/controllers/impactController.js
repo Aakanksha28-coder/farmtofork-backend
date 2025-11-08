@@ -5,14 +5,28 @@ const ImpactStory = require('../models/ImpactStory');
 // @route   GET /api/impact
 // @access  Public
 const getStories = asyncHandler(async (req, res) => {
+  // Ensure database connection
+  const mongoose = require('mongoose');
+  const connectDB = require('../config/db');
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB();
+  }
+
   const stories = await ImpactStory.find({}).populate('author', 'name role');
-  res.json(stories);
+  res.json(stories || []);
 });
 
 // @desc    Create an impact story
 // @route   POST /api/impact
 // @access  Private
 const createStory = asyncHandler(async (req, res) => {
+  // Ensure database connection
+  const mongoose = require('mongoose');
+  const connectDB = require('../config/db');
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB();
+  }
+
   const { title, role, name, location, quote, stats } = req.body;
 
   const story = new ImpactStory({

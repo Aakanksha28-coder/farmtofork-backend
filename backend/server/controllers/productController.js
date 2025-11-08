@@ -3,6 +3,13 @@ const Product = require('../models/Product');
 // Create a product (farmer only)
 exports.createProduct = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate } = req.body;
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
     const product = await Product.create({
@@ -19,25 +26,26 @@ exports.createProduct = async (req, res) => {
     });
     res.status(201).json(product);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Create product error:', error);
+    res.status(400).json({ message: error.message || 'Failed to create product' });
   }
 };
 
 // Get products (optionally upcoming, optionally mine)
 exports.getProducts = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const { upcoming, mine } = req.query;
     const query = {};
     if (upcoming === 'true') query.isUpcoming = true;
     if (upcoming === 'false') query.isUpcoming = false;
     if (mine === 'true' && req.user) query.farmer = req.user._id;
-
-    // Check if database connection exists
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
-    }
 
     const products = await Product.find(query).populate('farmer', 'name email').sort({ createdAt: -1 });
     res.json(products || []);
@@ -49,11 +57,11 @@ exports.getProducts = async (req, res) => {
 
 exports.getMyProducts = async (req, res) => {
   try {
-    // Check if database connection exists
+    // Ensure database connection
     const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
     if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+      await connectDB();
     }
 
     // Query products directly by the authenticated farmer
@@ -68,11 +76,11 @@ exports.getMyProducts = async (req, res) => {
 // Get single product
 exports.getProductById = async (req, res) => {
   try {
-    // Check if database connection exists
+    // Ensure database connection
     const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
     if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database connection not available' });
+      await connectDB();
     }
 
     const product = await Product.findById(req.params.id).populate('farmer', 'name email');
@@ -87,6 +95,13 @@ exports.getProductById = async (req, res) => {
 // Update product (farmer only)
 exports.updateProduct = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     if (String(product.farmer) !== String(req.user._id)) {
@@ -105,13 +120,21 @@ exports.updateProduct = async (req, res) => {
     await product.save();
     res.json(product);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Update product error:', error);
+    res.status(400).json({ message: error.message || 'Failed to update product' });
   }
 };
 
 // Delete product (farmer only)
 exports.deleteProduct = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     if (String(product.farmer) !== String(req.user._id)) {
@@ -121,6 +144,7 @@ exports.deleteProduct = async (req, res) => {
     await product.deleteOne();
     res.json({ message: 'Product deleted' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Delete product error:', error);
+    res.status(500).json({ message: error.message || 'Failed to delete product' });
   }
 };

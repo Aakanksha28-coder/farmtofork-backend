@@ -18,6 +18,13 @@ const tryDecodeUser = (req) => {
 
 exports.createMessage = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const { name, email, phone, subject, message, role } = req.body;
     if (!name || !email || !subject || !message) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -38,12 +45,19 @@ exports.createMessage = async (req, res) => {
     res.status(201).json({ message: 'Message received', id: doc._id });
   } catch (error) {
     console.error('Create contact message error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
 exports.listMessages = async (req, res) => {
   try {
+    // Ensure database connection
+    const mongoose = require('mongoose');
+    const connectDB = require('../config/db');
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
     const { role, status, q } = req.query;
     const filter = {};
     if (role) filter.role = role;
@@ -58,10 +72,10 @@ exports.listMessages = async (req, res) => {
     }
 
     const items = await ContactMessage.find(filter).sort({ createdAt: -1 });
-    res.json(items);
+    res.json(items || []);
   } catch (error) {
     console.error('List contact messages error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: error.message || 'Server error' });
   }
 };
 
