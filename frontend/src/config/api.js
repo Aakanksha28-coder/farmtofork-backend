@@ -11,8 +11,11 @@ if (envBase && typeof envBase === 'string' && envBase.trim()) {
   API_BASE_URL = 'http://localhost:5000/api';
 } else if (typeof window !== 'undefined') {
   const host = window.location.hostname;
-  // Use Render backend for production
-  if (host.includes('onrender.com') || host.includes('farmtofork-frontend')) {
+  // Force Render backend URL for production deployments
+  if (host.includes('onrender.com') || host.includes('farmtofork-frontend') || host.includes('render.com')) {
+    API_BASE_URL = 'https://farmtofork-backend-2.onrender.com/api';
+  } else if (host.includes('vercel.app')) {
+    // Legacy Vercel deployments should also use Render backend
     API_BASE_URL = 'https://farmtofork-backend-2.onrender.com/api';
   } else {
     // When frontend and backend share the same domain (e.g., via platform routing),
