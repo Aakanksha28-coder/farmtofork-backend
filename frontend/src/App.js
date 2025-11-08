@@ -17,6 +17,11 @@ import FarmerDashboard from './pages/FarmerDashboard';
 import FarmerOrders from './pages/FarmerOrders';
 import Impact from './pages/Impact';
 import StoryForm from './components/StoryForm';
+import About from './pages/About';
+import FeaturesPage from './pages/FeaturesPage';
+import MarketPrices from './pages/MarketPrices';
+import Contact from './pages/Contact';
+import AdminMessages from './pages/AdminMessages';
 
 function App() {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
@@ -60,7 +65,10 @@ function App() {
             />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
-
+            <Route path="/about" element={<About />} />
+            <Route path="/features" element={<FeaturesPage />} />
+            <Route path="/market-prices" element={<MarketPrices />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/impact" element={<Impact />} />
             <Route path="/add-story" element={<ProtectedRoute><StoryForm /></ProtectedRoute>} />
 
@@ -78,6 +86,15 @@ function App() {
               element={
                 <ProtectedRoute roles={["farmer"]}>
                   <FarmerOrders />
+                </ProtectedRoute>
+              }
+            />
+            {/* Admin routes */}
+            <Route
+              path="/admin/messages"
+              element={
+                <ProtectedRoute roles={["admin"]}>
+                  <AdminMessages />
                 </ProtectedRoute>
               }
             />

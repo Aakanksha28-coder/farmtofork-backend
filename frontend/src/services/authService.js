@@ -38,15 +38,13 @@ export const loginUser = async (email, password) => {
     
     const data = await handleResponse(response);
 
-    // Normalize possible response shapes: { token, user } or top-level fields
-    const token = data?.token || data?.data?.token;
-    const userRaw = data?.user || data?.data?.user || data;
-
+    // Backend returns: { _id, name, email, role, token }
+    const token = data?.token;
     const userData = {
-      _id: userRaw?._id,
-      name: userRaw?.name || userRaw?.username || userRaw?.fullName || '',
-      email: userRaw?.email,
-      role: userRaw?.role
+      _id: data?._id,
+      name: data?.name || '',
+      email: data?.email,
+      role: data?.role || 'customer'
     };
 
     // Save token and user to localStorage
@@ -73,15 +71,13 @@ export const registerUser = async (userData) => {
     
     const data = await handleResponse(response);
 
-    // Normalize possible response shapes
-    const token = data?.token || data?.data?.token;
-    const userRaw = data?.user || data?.data?.user || data;
-
+    // Backend returns: { _id, name, email, role, token }
+    const token = data?.token;
     const createdUser = {
-      _id: userRaw?._id,
-      name: userRaw?.name || userRaw?.username || userRaw?.fullName || '',
-      email: userRaw?.email,
-      role: userRaw?.role
+      _id: data?._id,
+      name: data?.name || '',
+      email: data?.email,
+      role: data?.role || 'customer'
     };
 
     // Save token and user to localStorage

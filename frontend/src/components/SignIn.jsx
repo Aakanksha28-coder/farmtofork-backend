@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './SignIn.css';
 
 const SignIn = () => {
@@ -70,8 +70,8 @@ const SignIn = () => {
           </button>
         </form>
         <div className="signin-footer">
-          <p>Don't have an account? <a href="/signup">Sign Up</a></p>
-          <p><a href="/forgot-password">Forgot Password?</a></p>
+          <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
+          <p><Link to="/forgot-password">Forgot Password?</Link></p>
         </div>
       </div>
     </div>

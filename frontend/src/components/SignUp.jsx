@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './SignUp.css';
 
 const SignUp = () => {
@@ -63,11 +63,6 @@ const SignUp = () => {
           farmLocation: formData.farmLocation,
           farmProducts: formData.farmProducts
         };
-      } else if (formData.role === 'admin') {
-        userData.roleSpecificData = {
-          businessName: formData.businessName,
-          businessType: formData.businessType
-        };
       } else if (formData.role === 'customer') {
         userData.roleSpecificData = {
           deliveryArea: formData.deliveryArea
@@ -122,35 +117,6 @@ const SignUp = () => {
                 value={formData.farmProducts}
                 onChange={handleChange}
                 placeholder="List the products you grow"
-                required
-              />
-            </div>
-          </>
-        );
-      case 'admin':
-        return (
-          <>
-            <div className="form-group">
-              <label htmlFor="businessName">Business Name</label>
-              <input
-                type="text"
-                id="businessName"
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleChange}
-                placeholder="Enter your business name"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="businessType">Business Type</label>
-              <input
-                type="text"
-                id="businessType"
-                name="businessType"
-                value={formData.businessType}
-                onChange={handleChange}
-                placeholder="Enter your business type"
                 required
               />
             </div>
@@ -245,7 +211,7 @@ const SignUp = () => {
           </button>
         </form>
         <div className="signup-footer">
-          <p>Already have an account? <a href="/signin">Sign In</a></p>
+          <p>Already have an account? <Link to="/signin">Sign In</Link></p>
         </div>
       </div>
     </div>
