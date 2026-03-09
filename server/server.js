@@ -62,7 +62,46 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 
 // Default route
 app.get('/', (req, res) => {
-  res.send('API is running...');
+  res.json({ 
+    message: 'Farm to Fork API is running',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/api/auth',
+      products: '/api/products',
+      market: '/api/market',
+      impact: '/api/impact',
+      negotiations: '/api/negotiations',
+      orders: '/api/orders',
+      contact: '/api/contact'
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ 
+    message: 'Endpoint not found',
+    path: req.path,
+    method: req.method,
+    availableEndpoints: [
+      '/api/auth',
+      '/api/products',
+      '/api/market',
+      '/api/impact',
+      '/api/negotiations',
+      '/api/orders',
+      '/api/contact'
+    ]
+  });
 });
 
 // Start server
