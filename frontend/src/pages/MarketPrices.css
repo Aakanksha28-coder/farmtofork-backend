@@ -1,0 +1,152 @@
+.market-prices {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.market-prices h1 {
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.search-box input {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 300px;
+  max-width: 100%;
+}
+
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-btn {
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-btn:hover {
+  background: #e9e9e9;
+}
+
+.category-btn.active {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.prices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.price-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.price-card:hover {
+  transform: translateY(-5px);
+}
+
+.price-header {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.price-header h3 {
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.category {
+  display: inline-block;
+  font-size: 0.8rem;
+  background: #f0f8ff;
+  color: #0077cc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.price-body {
+  padding: 1rem;
+}
+
+.price-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4caf50;
+  margin-bottom: 0.25rem;
+}
+
+.unit {
+  font-size: 1rem;
+  font-weight: normal;
+  color: #666;
+}
+
+.price-rate {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+  background-color: #f0f8ff;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.price-meta {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.source {
+  margin-bottom: 0.25rem;
+}
+
+.loading, .error, .no-results {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.error {
+  color: #d32f2f;
+}
+
+@media (max-width: 768px) {
+  .filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .search-box input {
+    width: 100%;
+  }
+}

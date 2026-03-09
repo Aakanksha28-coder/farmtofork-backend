@@ -2,17 +2,10 @@
   "name": "f-to-f-backend",
   "version": "1.0.0",
   "private": true,
-<<<<<<< HEAD
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
     "dev": "nodemon server/server.js"
-=======
-  "main": "backend/server/server.js",
-  "scripts": {
-    "start": "node backend/server/server.js",
-    "dev": "nodemon backend/server/server.js"
->>>>>>> a3860bc80a70480fee7043908b9c2aa759d70ef1
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

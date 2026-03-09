@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plate/Circle Background -->
+  <ellipse cx="30" cy="30" rx="28" ry="28" fill="#f5f5f5" stroke="#4CAF50" stroke-width="2"/>
+  
+  <!-- Wheat/Corn Stalks -->
+  <g transform="translate(15, 15) scale(0.8)">
+    <!-- Left Stalk -->
+    <path d="M20,45 C20,25 15,15 15,5" stroke="#FF6B35" stroke-width="2" fill="none"/>
+    <path d="M15,8 C12,10 10,8 10,5" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M15,15 C12,17 10,15 10,12" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M15,22 C12,24 10,22 10,19" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    
+    <!-- Right Stalk -->
+    <path d="M25,45 C25,25 30,15 30,5" stroke="#FF6B35" stroke-width="2" fill="none"/>
+    <path d="M30,8 C33,10 35,8 35,5" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M30,15 C33,17 35,15 35,12" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M30,22 C33,24 35,22 35,19" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    
+    <!-- Middle Stalk -->
+    <path d="M22.5,45 C22.5,25 22.5,15 22.5,2" stroke="#FF6B35" stroke-width="2" fill="none"/>
+    <path d="M22.5,8 C19.5,6 17.5,8 17.5,11" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M22.5,8 C25.5,6 27.5,8 27.5,11" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M22.5,16 C19.5,14 17.5,16 17.5,19" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+    <path d="M22.5,16 C25.5,14 27.5,16 27.5,19" stroke="#FF6B35" stroke-width="1.5" fill="none"/>
+  </g>
+  
+  <!-- Fork -->
+  <path d="M40,50 C40,40 45,35 45,25 L50,25 L50,35 L47,35 L47,50 Z" fill="#666" stroke="#444" stroke-width="1"/>
+  
+  <!-- Text -->
+  <text x="65" y="25" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#4CAF50">FARM-TO-FORK</text>
+  <text x="65" y="42" font-family="Arial, sans-serif" font-size="12" fill="#666">Fresh from the field</text>
+</svg>

@@ -1,0 +1,8 @@
+.fo { max-width: 900px; margin: 1.5rem auto; }
+.fo-list { list-style: none; padding: 0; margin: 1rem 0; }
+.fo-item { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem; border-bottom: 1px solid #eee; background: #fff; border-radius: 6px; }
+.fo-row { display: flex; align-items: center; gap: 0.75rem; }
+.fo-meta { color: #666; font-size: 0.9rem; }
+.fo-actions { display: flex; align-items: center; gap: 0.5rem; }
+.status { font-weight: 600; }
+.error { color: #d32f2f; }

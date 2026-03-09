@@ -1,0 +1,149 @@
+.tracking {
+  max-width: 1100px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.tracking h1 {
+  margin-bottom: 1.5rem;
+}
+
+.tracking-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+}
+
+.tracking-details, .order-items {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  padding: 1.5rem;
+}
+
+.tracking-status, .shipping-info, .payment-info {
+  margin-bottom: 2rem;
+}
+
+.tracking-status h2 {
+  margin-bottom: 1rem;
+}
+
+.status {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+.timeline {
+  margin-top: 1.5rem;
+  position: relative;
+}
+
+.timeline:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 7px;
+  width: 2px;
+  background: #e0e0e0;
+}
+
+.timeline-event {
+  position: relative;
+  padding-left: 30px;
+  margin-bottom: 1.5rem;
+}
+
+.event-dot {
+  position: absolute;
+  left: 0;
+  top: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4caf50;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #4caf50;
+}
+
+.event-content {
+  background: #f9f9f9;
+  border-radius: 4px;
+  padding: 0.75rem;
+}
+
+.event-status {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.event-date {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.event-comment {
+  font-size: 0.9rem;
+}
+
+.shipping-info h2, .payment-info h2, .order-items h2 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.shipping-info p, .payment-info p {
+  margin-bottom: 0.5rem;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-name {
+  font-weight: 500;
+}
+
+.item-price {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.order-totals {
+  margin-top: 1.5rem;
+  border-top: 1px solid #eee;
+  padding-top: 1rem;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.grand-total {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.error {
+  color: #d32f2f;
+}
+
+@media (max-width: 768px) {
+  .tracking-grid {
+    grid-template-columns: 1fr;
+  }
+}
