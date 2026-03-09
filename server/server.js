@@ -45,7 +45,20 @@ app.set('etag', false);
 // Middleware
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(cors());
+
+// CORS configuration - allow requests from frontend
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',
+    'https://farmtofork-frontend.onrender.com',
+    'https://farmtofork-frontend.vercel.app',
+    /\.onrender\.com$/,
+    /\.vercel\.app$/
+  ],
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 
 // Static uploads
 const path = require('path');
