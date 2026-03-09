@@ -30,8 +30,9 @@ const upload = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 5 
 
 // Public: list products and upcoming
 router.get('/', getProducts);
-// Add protected route to list products owned by the authenticated farmer
+// Add protected route to list products owned by the authenticated farmer (must be before /:id)
 router.get('/mine', protect, authorizeRoles('farmer'), getMyProducts);
+// Get single product by ID (must be after /mine to avoid conflict)
 router.get('/:id', getProductById);
 
 // Farmer-only operations
