@@ -7,6 +7,10 @@ const morgan = require('morgan');
 // Load env vars
 dotenv.config();
 
+console.log('🚀 Starting Farm to Fork Backend...');
+console.log(`📦 Node Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`🔑 Environment Variables Loaded: ${Object.keys(process.env).length}`);
+
 // Connect to database
 connectDB();
 
