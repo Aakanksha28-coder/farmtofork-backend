@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 
 const connectDB = async () => {
+  const mongoURI = process.env.MONGO_URI;
+  
   try {
-    const mongoURI = process.env.MONGO_URI;
-    
     if (!mongoURI) {
       console.error('❌ MONGO_URI environment variable is not set!');
       console.error('Please set MONGO_URI in your Render environment variables.');
@@ -35,6 +35,7 @@ const connectDB = async () => {
       console.error('2. Verify the connection string format in MONGO_URI');
       console.error('3. Ensure the cluster address is correct');
       console.error('4. Check if MongoDB Atlas is accessible from Render servers');
+      console.error('5. Try creating a NEW MongoDB Atlas cluster with a different name');
     } else if (error.message.includes('authentication failed')) {
       console.error('\n🔍 Authentication Error:');
       console.error('1. Check username and password in connection string');
@@ -46,7 +47,9 @@ const connectDB = async () => {
       console.error('2. Or add Render\'s IP addresses to whitelist');
     }
     
-    console.error('\n📝 Current MONGO_URI format:', mongoURI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@'));
+    if (mongoURI) {
+      console.error('\n📝 Current MONGO_URI format:', mongoURI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@'));
+    }
     process.exit(1);
   }
 };
