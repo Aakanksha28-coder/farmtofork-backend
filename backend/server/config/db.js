@@ -16,7 +16,11 @@ const connectDB = async () => {
       return mongoose.connection;
     }
 
-    const uri = process.env.MONGO_URI || 'mongodb+srv://aakankshamore2805_db_user:farmtofork@cluster0.wh5gwdo.mongodb.net/farm-to-fork?retryWrites=true&w=majority&appName=Cluster0';
+    const uri = process.env.MONGO_URI;
+    if (!uri) {
+      console.error('❌ MONGO_URI environment variable is not set');
+      return null;
+    }
 
     // Create a single connection promise
     connectingPromise = mongoose.connect(uri, {

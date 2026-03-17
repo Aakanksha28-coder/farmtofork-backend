@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const connectDB = require('../config/db');
 
 // Generate JWT token
 const generateToken = (id) => {
@@ -13,6 +14,9 @@ const generateToken = (id) => {
 // @access  Public
 exports.registerUser = async (req, res) => {
   try {
+    const conn = await connectDB();
+    if (!conn) return res.status(500).json({ message: 'Database connection unavailable' });
+
     const { name, email, password, role, roleSpecificData } = req.body;
 
     // Restrict creating admin via public registration; use env-seeded admin only
@@ -62,6 +66,9 @@ exports.registerUser = async (req, res) => {
 // @access  Public
 exports.loginUser = async (req, res) => {
   try {
+    const conn = await connectDB();
+    if (!conn) return res.status(500).json({ message: 'Database connection unavailable' });
+
     const { email, password } = req.body;
 
     // Find user by email
@@ -90,6 +97,9 @@ exports.loginUser = async (req, res) => {
 // @access  Private
 exports.getUserProfile = async (req, res) => {
   try {
+    const conn = await connectDB();
+    if (!conn) return res.status(500).json({ message: 'Database connection unavailable' });
+
     const user = await User.findById(req.user._id).select('-password');
     
     if (user) {
