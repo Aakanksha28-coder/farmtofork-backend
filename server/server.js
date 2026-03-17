@@ -96,20 +96,8 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    email: process.env.EMAIL_USER ? 'configured' : 'not configured'
+    uptime: process.uptime()
   });
-});
-
-// Test email endpoint (remove after confirming email works)
-app.get('/test-email', async (req, res) => {
-  const sendEmail = require('./utils/sendEmail');
-  const result = await sendEmail({
-    to: process.env.EMAIL_USER,
-    subject: 'FarmToFork Email Test',
-    html: '<h2>Email is working! ✅</h2><p>FarmToFork email config is correct.</p>'
-  });
-  res.json({ result });
 });
 
 // 404 handler

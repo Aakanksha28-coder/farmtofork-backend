@@ -13,40 +13,29 @@ const generateToken = (id) => {
 // @access  Public
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, roleSpecificData } = req.body;
+    const { name, email, password, role, roleSpecificData, whatsapp } = req.body;
 
-    // Restrict creating admin via public registration; use env-seeded admin only
     if (role === 'admin') {
       return res.status(403).json({ message: 'Admin registration is restricted' });
     }
 
-    // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    // Create user with role-specific data
-    const userData = { 
-      name, 
-      email, 
-      password, 
-      role,
+    const user = await User.create({
+      name, email, password, role,
+      whatsapp: whatsapp || '',
       roleSpecificData: roleSpecificData || {}
-    };
-
-    const user = await User.create(userData);
+    });
 
     if (user) {
-      // Create token
       const token = generateToken(user._id);
-      
       res.status(201).json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token
+        _id: user._id, name: user.name, email: user.email,
+        role: user.role, whatsapp: user.whatsapp,
+        roleSpecificData: user.roleSpecificData, token
       });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
@@ -70,10 +59,9 @@ exports.loginUser = async (req, res) => {
     // Check if user exists and password matches
     if (user && (await user.comparePassword(password))) {
       res.json({
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        _id: user._id, name: user.name, email: user.email,
+        role: user.role, whatsapp: user.whatsapp,
+        roleSpecificData: user.roleSpecificData,
         token: generateToken(user._id)
       });
     } else {

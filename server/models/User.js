@@ -28,6 +28,12 @@ const UserSchema = new mongoose.Schema({
     type: Object,
     default: {}
   },
+  // WhatsApp number for order notifications
+  whatsapp: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   // Common fields
   createdAt: {
     type: Date,

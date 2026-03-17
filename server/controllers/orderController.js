@@ -1,9 +1,57 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
 const generateInvoice = require('../utils/generateInvoice');
-const { orderConfirmationEmail, orderStatusEmail } = require('../utils/emailTemplates');
+
+// Build a WhatsApp wa.me URL with order summary text
+const buildWhatsAppUrl = (phone, text) => {
+  if (!phone) return null;
+  // Strip non-digits, ensure country code (default +91 India)
+  const digits = phone.replace(/\D/g, '');
+  const number = digits.startsWith('91') ? digits : `91${digits}`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+};
+
+const buildOrderMessage = (order, customerName, farmerName) => {
+  const lines = [
+    `*FarmToFork Order Confirmation*`,
+    ``,
+    `Order ID: ${order._id}`,
+    `Customer: ${customerName}`,
+    `Farmer: ${farmerName || 'N/A'}`,
+    ``,
+    `*Items:*`,
+    ...(order.items || []).map(i => `  - ${i.name} x${i.quantity} @ Rs.${i.price} = Rs.${(i.price * i.quantity).toFixed(2)}`),
+    ``,
+    `Subtotal: Rs.${order.total}`,
+    order.shippingPrice > 0 ? `Shipping: Rs.${order.shippingPrice}` : null,
+    `*Total: Rs.${order.totalPrice}*`,
+    `Payment: ${(order.paymentMethod || 'cod').toUpperCase()}`,
+    ``,
+    `Thank you for shopping with FarmToFork!`
+  ].filter(l => l !== null).join('\n');
+  return lines;
+};
+
+const buildStatusMessage = (order, status, note) => [
+  `*FarmToFork Order Update*`,
+  ``,
+  `Order ID: ${order._id}`,
+  `Status: *${status.toUpperCase()}*`,
+  note ? `Note: ${note}` : null,
+  ``,
+  STATUS_TEXT[status] || `Your order status has been updated.`
+].filter(Boolean).join('\n');
+
+const STATUS_TEXT = {
+  confirmed:  'Your order has been accepted by the farmer.',
+  on_route:   'Your order is on the way!',
+  shipped:    'Your order has been shipped and is on the way.',
+  delivered:  'Your order has been delivered successfully.',
+  received:   'Order marked as received. Enjoy your fresh produce!',
+  cancelled:  'Your order has been cancelled.',
+  pending:    'Your order is pending confirmation.'
+};
 
 // Create a new order
 exports.createOrder = async (req, res) => {
@@ -42,29 +90,37 @@ exports.createOrder = async (req, res) => {
       tracking: [{ status: 'pending', note: 'Order created' }]
     });
 
-    // ── Send confirmation email with PDF invoice ──────────────
+    // ── Build WhatsApp notification URLs ─────────────────────
+    let whatsappCustomer = null;
+    let whatsappFarmer   = null;
     try {
-      const customer = await User.findById(req.user._id).select('name email');
-      const farmer   = farmerId ? await User.findById(farmerId).select('name') : null;
+      const customer = await User.findById(req.user._id).select('name whatsapp');
+      const farmer   = farmerId ? await User.findById(farmerId).select('name whatsapp') : null;
 
-      const pdfBuffer = await generateInvoice(order, customer?.name, farmer?.name);
+      const msg = buildOrderMessage(order, customer?.name, farmer?.name);
 
-      await sendEmail({
-        to: customer.email,
-        subject: `Order Confirmation with Invoice — #${order._id}`,
-        html: orderConfirmationEmail(order, customer?.name),
-        attachments: [{
-          filename: `invoice_${order._id}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf'
-        }]
-      });
-    } catch (emailErr) {
-      console.error('Order confirmation email error:', emailErr.message);
-      // Don't fail the order if email/PDF fails
+      if (customer?.whatsapp) {
+        whatsappCustomer = buildWhatsAppUrl(customer.whatsapp, msg);
+      }
+      if (farmer?.whatsapp) {
+        // Farmer gets a notification too
+        const farmerMsg = [
+          `*FarmToFork New Order*`,
+          ``,
+          `Order ID: ${order._id}`,
+          `Customer: ${customer?.name || 'Customer'}`,
+          ``,
+          ...(order.items || []).map(i => `  - ${i.name} x${i.quantity}`),
+          ``,
+          `*Total: Rs.${order.totalPrice}*`
+        ].join('\n');
+        whatsappFarmer = buildWhatsAppUrl(farmer.whatsapp, farmerMsg);
+      }
+    } catch (err) {
+      console.error('WhatsApp URL build error:', err.message);
     }
 
-    res.status(201).json(order);
+    res.status(201).json({ ...order.toObject(), whatsappCustomer, whatsappFarmer });
   } catch (error) {
     console.error('Create order error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -131,21 +187,19 @@ exports.updateOrderStatus = async (req, res) => {
     order.tracking.push({ status: order.status, note: note || 'Status updated' });
     await order.save();
 
-    // ── Send status update email ──────────────────────────────
+    // ── Build WhatsApp status update URL ─────────────────────
+    let whatsappCustomer = null;
     try {
-      const customer = await User.findById(order.customer).select('name email');
-      if (customer?.email) {
-        await sendEmail({
-          to: customer.email,
-          subject: `Order Update: ${status.toUpperCase()} — #${order._id}`,
-          html: orderStatusEmail(order, customer.name, status)
-        });
+      const customer = await User.findById(order.customer).select('name whatsapp');
+      if (customer?.whatsapp) {
+        const msg = buildStatusMessage(order, status, note);
+        whatsappCustomer = buildWhatsAppUrl(customer.whatsapp, msg);
       }
-    } catch (emailErr) {
-      console.error('Status email error:', emailErr.message);
+    } catch (err) {
+      console.error('WhatsApp status URL error:', err.message);
     }
 
-    res.json(order);
+    res.json({ ...order.toObject(), whatsappCustomer });
   } catch (error) {
     console.error('Update order status error:', error);
     res.status(500).json({ message: 'Server error' });
