@@ -72,6 +72,7 @@ app.use('/api/negotiations', require('./routes/negotiationRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/market', require('./routes/marketRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/chatbot', require('./routes/chatbotRoutes'));
 
 // Default route
 app.get('/', (req, res) => {
