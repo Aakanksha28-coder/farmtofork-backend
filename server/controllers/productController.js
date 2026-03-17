@@ -3,19 +3,21 @@ const Product = require('../models/Product');
 // Create a product (farmer only)
 exports.createProduct = async (req, res) => {
   try {
-    const { name, description, price, quantity, unit, offer, isUpcoming, availableDate } = req.body;
+    const { name, description, price, quantity, unit, offer, isUpcoming, availableDate,
+            category, isOrganic, suitableFor, specialNotes, tags } = req.body;
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
     const product = await Product.create({
-      name,
-      description,
+      name, description,
       price: Number(price),
       quantity: Number(quantity),
-      unit,
-      offer,
-      imageUrl,
+      unit, offer, imageUrl,
       isUpcoming: !!isUpcoming,
       availableDate: availableDate ? new Date(availableDate) : undefined,
-      farmer: req.user._id
+      farmer: req.user._id,
+      category: category || 'general',
+      isOrganic: !!isOrganic,
+      suitableFor, specialNotes,
+      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim())) : []
     });
     res.status(201).json(product);
   } catch (error) {
@@ -69,7 +71,8 @@ exports.updateProduct = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this product' });
     }
 
-    const fields = ['name', 'description', 'price', 'quantity', 'unit', 'offer', 'isUpcoming', 'availableDate'];
+    const fields = ['name', 'description', 'price', 'quantity', 'unit', 'offer',
+                    'isUpcoming', 'availableDate', 'category', 'isOrganic', 'suitableFor', 'specialNotes', 'tags'];
     fields.forEach((f) => {
       if (req.body[f] !== undefined) product[f] = req.body[f];
     });
@@ -96,6 +99,27 @@ exports.deleteProduct = async (req, res) => {
 
     await product.deleteOne();
     res.json({ message: 'Product deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/products/pooja — public, returns only pooja category products
+exports.getPoojaProducts = async (req, res) => {
+  try {
+    const { organic, festival, minPrice, maxPrice } = req.query;
+    const query = { category: 'pooja' };
+    if (organic === 'true') query.isOrganic = true;
+    if (festival) query.suitableFor = { $regex: festival, $options: 'i' };
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+    const products = await Product.find(query)
+      .populate('farmer', 'name')
+      .sort({ createdAt: -1 });
+    res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

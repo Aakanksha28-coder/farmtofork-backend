@@ -8,7 +8,8 @@ const {
   getProductById,
   updateProduct,
   deleteProduct,
-  getMyProducts
+  getMyProducts,
+  getPoojaProducts
 } = require('../controllers/productController');
 
 // Multer setup for image upload
@@ -30,6 +31,8 @@ const upload = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 5 
 
 // Public: list products and upcoming
 router.get('/', getProducts);
+// Pooja products — must be before /:id
+router.get('/pooja', getPoojaProducts);
 // Add protected route to list products owned by the authenticated farmer (must be before /:id)
 router.get('/mine', protect, authorizeRoles('farmer'), getMyProducts);
 // Get single product by ID (must be after /mine to avoid conflict)

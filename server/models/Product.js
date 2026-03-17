@@ -11,7 +11,13 @@ const ProductSchema = new mongoose.Schema(
     imageUrl: { type: String },
     isUpcoming: { type: Boolean, default: false },
     availableDate: { type: Date },
-    farmer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+    farmer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // Pooja Paath fields
+    category: { type: String, enum: ['general', 'pooja'], default: 'general' },
+    isOrganic: { type: Boolean, default: false },
+    suitableFor: { type: String },   // e.g. "Ganesh Puja, Diwali"
+    specialNotes: { type: String },
+    tags: [{ type: String }]         // e.g. ["organic","festival-special","temple-grade"]
   },
   { timestamps: true }
 );
