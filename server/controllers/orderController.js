@@ -1,5 +1,9 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
+const generateInvoice = require('../utils/generateInvoice');
+const { orderConfirmationEmail, orderStatusEmail } = require('../utils/emailTemplates');
 
 // Create a new order
 exports.createOrder = async (req, res) => {
@@ -9,7 +13,6 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: 'No items in order' });
     }
 
-    // Compute total from product prices to prevent tampering
     let itemsTotal = 0;
     const orderItems = [];
     let farmerId;
@@ -33,11 +36,33 @@ exports.createOrder = async (req, res) => {
       shippingPrice: shipping,
       totalPrice,
       paymentMethod,
-      isPaid: paymentMethod === 'cod' ? false : false,
+      isPaid: false,
       shippingAddress,
       status: 'pending',
       tracking: [{ status: 'pending', note: 'Order created' }]
     });
+
+    // ── Send confirmation email with PDF invoice ──────────────
+    try {
+      const customer = await User.findById(req.user._id).select('name email');
+      const farmer   = farmerId ? await User.findById(farmerId).select('name') : null;
+
+      const pdfBuffer = await generateInvoice(order, customer?.name, farmer?.name);
+
+      await sendEmail({
+        to: customer.email,
+        subject: `Order Confirmation with Invoice — #${order._id}`,
+        html: orderConfirmationEmail(order, customer?.name),
+        attachments: [{
+          filename: `invoice_${order._id}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }]
+      });
+    } catch (emailErr) {
+      console.error('Order confirmation email error:', emailErr.message);
+      // Don't fail the order if email/PDF fails
+    }
 
     res.status(201).json(order);
   } catch (error) {
@@ -96,7 +121,6 @@ exports.updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    // Only the farmer who owns the order or an admin can update status
     const isAdmin = req.user?.role === 'admin';
     const isFarmerOwner = order.farmer && order.farmer.toString() === req.user._id.toString();
     if (!isAdmin && !isFarmerOwner) {
@@ -106,6 +130,21 @@ exports.updateOrderStatus = async (req, res) => {
     order.status = status || order.status;
     order.tracking.push({ status: order.status, note: note || 'Status updated' });
     await order.save();
+
+    // ── Send status update email ──────────────────────────────
+    try {
+      const customer = await User.findById(order.customer).select('name email');
+      if (customer?.email) {
+        await sendEmail({
+          to: customer.email,
+          subject: `Order Update: ${status.toUpperCase()} — #${order._id}`,
+          html: orderStatusEmail(order, customer.name, status)
+        });
+      }
+    } catch (emailErr) {
+      console.error('Status email error:', emailErr.message);
+    }
+
     res.json(order);
   } catch (error) {
     console.error('Update order status error:', error);
