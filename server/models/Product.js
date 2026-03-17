@@ -13,7 +13,7 @@ const ProductSchema = new mongoose.Schema(
     availableDate: { type: Date },
     farmer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     // Pooja Paath fields
-    category: { type: String, enum: ['general', 'pooja'], default: 'general' },
+    category: { type: String, enum: ['general', 'vegetable', 'fruits', 'flowers', 'pooja'], default: 'general' },
     isOrganic: { type: Boolean, default: false },
     suitableFor: { type: String },   // e.g. "Ganesh Puja, Diwali"
     specialNotes: { type: String },

@@ -28,13 +28,16 @@ exports.createProduct = async (req, res) => {
 // Get products (optionally upcoming, optionally mine)
 exports.getProducts = async (req, res) => {
   try {
-    const { upcoming, mine } = req.query;
+    const { upcoming, mine, category } = req.query;
     const query = {};
     if (upcoming === 'true') query.isUpcoming = true;
     if (upcoming === 'false') query.isUpcoming = false;
     if (mine === 'true' && req.user) query.farmer = req.user._id;
+    if (category) query.category = category;
 
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const products = await Product.find(query)
+      .populate('farmer', 'name')
+      .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: error.message });
