@@ -34,12 +34,6 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
-  // CallMeBot API key — user gets this after activating CallMeBot
-  callmebotApiKey: {
-    type: String,
-    trim: true,
-    default: ''
-  },
   // Common fields
   createdAt: {
     type: Date,
