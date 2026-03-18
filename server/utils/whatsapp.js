@@ -1,45 +1,48 @@
-const twilio = require('twilio');
-
-// Lazily initialise client so missing env vars don't crash the server
-let client = null;
-const getClient = () => {
-  if (!client) {
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    if (!sid || !token) {
-      console.warn('⚠️  TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN not set — WhatsApp disabled');
-      return null;
-    }
-    client = twilio(sid, token);
-  }
-  return client;
-};
+const https = require('https');
 
 /**
- * Send a WhatsApp message via Twilio.
- * @param {string} to   - recipient phone, e.g. "9876543210" or "+919876543210"
- * @param {string} body - message text
+ * Send a WhatsApp message via CallMeBot (free, no account needed).
+ *
+ * IMPORTANT — each recipient must activate CallMeBot once:
+ *   1. Save +34 644 59 78 19 in contacts as "CallMeBot"
+ *   2. Send this message to that number on WhatsApp:
+ *      "I allow callmebot to send me messages"
+ *   3. They'll receive an API key — store it in their profile (callmebotApiKey field)
+ *
+ * @param {string} phone  - recipient phone with country code, e.g. "919876543210"
+ * @param {string} apiKey - the CallMeBot API key for that specific phone number
+ * @param {string} text   - message body
  */
-const sendWhatsApp = async (to, body) => {
-  const c = getClient();
-  if (!c) return;
-
-  // Normalise to E.164 with India default (+91)
-  const digits = to.replace(/\D/g, '');
-  const e164 = digits.startsWith('91') ? `+${digits}` : `+91${digits}`;
-
-  const from = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886'; // Twilio sandbox default
-
-  try {
-    const msg = await c.messages.create({
-      from: `whatsapp:${from.replace('whatsapp:', '')}`,
-      to: `whatsapp:${e164}`,
-      body
-    });
-    console.log(`✅ WhatsApp sent to ${e164} — SID: ${msg.sid}`);
-  } catch (err) {
-    console.error(`❌ WhatsApp send failed to ${e164}:`, err.message);
+const sendWhatsApp = async (phone, apiKey, text) => {
+  if (!phone || !apiKey) {
+    console.warn('⚠️  WhatsApp skipped — missing phone or CallMeBot API key');
+    return;
   }
+
+  // Normalise: strip non-digits, add 91 if no country code
+  const digits = phone.replace(/\D/g, '');
+  const number = digits.startsWith('91') ? digits : `91${digits}`;
+
+  const encoded = encodeURIComponent(text);
+  const url = `https://api.callmebot.com/whatsapp.php?phone=${number}&text=${encoded}&apikey=${apiKey}`;
+
+  return new Promise((resolve) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          console.log(`✅ WhatsApp sent to ${number}`);
+        } else {
+          console.error(`❌ WhatsApp failed to ${number} — status ${res.statusCode}: ${data}`);
+        }
+        resolve();
+      });
+    }).on('error', (err) => {
+      console.error(`❌ WhatsApp request error to ${number}:`, err.message);
+      resolve();
+    });
+  });
 };
 
 module.exports = sendWhatsApp;

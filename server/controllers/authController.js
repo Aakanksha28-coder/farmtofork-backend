@@ -13,7 +13,7 @@ const generateToken = (id) => {
 // @access  Public
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, roleSpecificData, whatsapp } = req.body;
+    const { name, email, password, role, roleSpecificData, whatsapp, callmebotApiKey } = req.body;
 
     if (role === 'admin') {
       return res.status(403).json({ message: 'Admin registration is restricted' });
@@ -27,6 +27,7 @@ exports.registerUser = async (req, res) => {
     const user = await User.create({
       name, email, password, role,
       whatsapp: whatsapp || '',
+      callmebotApiKey: callmebotApiKey || '',
       roleSpecificData: roleSpecificData || {}
     });
 
@@ -35,6 +36,7 @@ exports.registerUser = async (req, res) => {
       res.status(201).json({
         _id: user._id, name: user.name, email: user.email,
         role: user.role, whatsapp: user.whatsapp,
+        callmebotApiKey: user.callmebotApiKey,
         roleSpecificData: user.roleSpecificData, token
       });
     } else {
@@ -61,6 +63,7 @@ exports.loginUser = async (req, res) => {
       res.json({
         _id: user._id, name: user.name, email: user.email,
         role: user.role, whatsapp: user.whatsapp,
+        callmebotApiKey: user.callmebotApiKey,
         roleSpecificData: user.roleSpecificData,
         token: generateToken(user._id)
       });

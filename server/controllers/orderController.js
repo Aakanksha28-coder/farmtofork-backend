@@ -73,11 +73,11 @@ const statusUpdateMsg = (order, status, note, recipientName) =>
 
 // ── Helper: fire-and-forget WhatsApp to multiple recipients ──────────────────
 const notify = async (recipients) => {
-  // recipients: [{ phone, message }]
+  // recipients: [{ phone, apiKey, message }]
   await Promise.allSettled(
     recipients
-      .filter(r => r.phone)
-      .map(r => sendWhatsApp(r.phone, r.message))
+      .filter(r => r.phone && r.apiKey)
+      .map(r => sendWhatsApp(r.phone, r.apiKey, r.message))
   );
 };
 
@@ -122,16 +122,18 @@ exports.createOrder = async (req, res) => {
 
     // ── Send WhatsApp notifications automatically ─────────────
     try {
-      const customer = await User.findById(req.user._id).select('name whatsapp');
-      const farmer   = farmerId ? await User.findById(farmerId).select('name whatsapp') : null;
+      const customer = await User.findById(req.user._id).select('name whatsapp callmebotApiKey');
+      const farmer   = farmerId ? await User.findById(farmerId).select('name whatsapp callmebotApiKey') : null;
 
       await notify([
         {
           phone: customer?.whatsapp,
+          apiKey: customer?.callmebotApiKey,
           message: orderConfirmationMsg(order, customer?.name, farmer?.name)
         },
         {
           phone: farmer?.whatsapp,
+          apiKey: farmer?.callmebotApiKey,
           message: newOrderFarmerMsg(order, customer?.name)
         }
       ]);
@@ -208,18 +210,20 @@ exports.updateOrderStatus = async (req, res) => {
 
     // ── Send WhatsApp status update automatically ─────────────
     try {
-      const customer = await User.findById(order.customer).select('name whatsapp');
-      const farmer   = order.farmer ? await User.findById(order.farmer).select('name whatsapp') : null;
+      const customer = await User.findById(order.customer).select('name whatsapp callmebotApiKey');
+      const farmer   = order.farmer ? await User.findById(order.farmer).select('name whatsapp callmebotApiKey') : null;
 
       await notify([
         {
           phone: customer?.whatsapp,
+          apiKey: customer?.callmebotApiKey,
           message: statusUpdateMsg(order, status, note, customer?.name || 'Customer')
         },
         // Also notify farmer on certain statuses (e.g. customer marked received)
         ...(status === 'received' || status === 'delivered'
           ? [{
               phone: farmer?.whatsapp,
+              apiKey: farmer?.callmebotApiKey,
               message: statusUpdateMsg(order, status, note, farmer?.name || 'Farmer')
             }]
           : [])
