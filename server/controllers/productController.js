@@ -36,7 +36,7 @@ exports.getProducts = async (req, res) => {
     if (category) query.category = category;
 
     const products = await Product.find(query)
-      .populate('farmer', 'name')
+      .populate('farmer', 'name roleSpecificData')
       .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
