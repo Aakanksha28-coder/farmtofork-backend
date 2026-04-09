@@ -5,7 +5,7 @@ exports.createProduct = async (req, res) => {
   try {
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate,
             category, isOrganic, suitableFor, specialNotes, tags } = req.body;
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+    const imageUrl = req.file ? req.file.path : undefined; // Cloudinary returns full https:// URL in .path
     const product = await Product.create({
       name, description,
       price: Number(price),
@@ -81,7 +81,7 @@ exports.updateProduct = async (req, res) => {
     });
 
     if (req.file) {
-      product.imageUrl = `/uploads/${req.file.filename}`;
+      product.imageUrl = req.file.path; // Cloudinary full URL
     }
 
     await product.save();
