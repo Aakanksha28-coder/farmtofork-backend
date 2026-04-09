@@ -5,7 +5,11 @@ exports.createProduct = async (req, res) => {
   try {
     const { name, description, price, quantity, unit, offer, isUpcoming, availableDate,
             category, isOrganic, suitableFor, specialNotes, tags } = req.body;
-    const imageUrl = req.file ? req.file.path : undefined; // Cloudinary returns full https:// URL in .path
+    // Convert uploaded file to base64 data URL — stored directly in MongoDB, no filesystem needed
+    let imageUrl = undefined;
+    if (req.file) {
+      imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    }
     const product = await Product.create({
       name, description,
       price: Number(price),
@@ -81,7 +85,7 @@ exports.updateProduct = async (req, res) => {
     });
 
     if (req.file) {
-      product.imageUrl = req.file.path; // Cloudinary full URL
+      product.imageUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
     }
 
     await product.save();

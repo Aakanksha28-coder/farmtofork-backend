@@ -1,23 +1,13 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('cloudinary').v2;
 
-// Configure Cloudinary from env vars
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'farmtofork/products',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, height: 800, crop: 'limit', quality: 'auto' }],
+// Store file in memory — we'll convert to base64 and save in MongoDB
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB max
+  fileFilter(req, file, cb) {
+    if (/image\/(jpeg|jpg|png|webp)/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Images only (jpg, png, webp)'));
   },
 });
-
-const upload = multer({ storage });
 
 module.exports = upload;
