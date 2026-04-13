@@ -34,6 +34,18 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  // GeoJSON location for geospatial queries (farmers)
+  location: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      default: undefined
+    }
+  },
   // Common fields
   createdAt: {
     type: Date,
@@ -58,5 +70,8 @@ UserSchema.pre('save', async function(next) {
 UserSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
+
+// 2dsphere index for geospatial queries on farmer locations
+UserSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('User', UserSchema);

@@ -13,7 +13,7 @@ const generateToken = (id) => {
 // @access  Public
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, roleSpecificData, whatsapp } = req.body;
+    const { name, email, password, role, roleSpecificData, whatsapp, lat, lng } = req.body;
 
     if (role === 'admin') {
       return res.status(403).json({ message: 'Admin registration is restricted' });
@@ -24,10 +24,16 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // Build GeoJSON location if coordinates provided (farmers)
+    const location = (lat != null && lng != null)
+      ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] }
+      : undefined;
+
     const user = await User.create({
       name, email, password, role,
       whatsapp: whatsapp || '',
-      roleSpecificData: roleSpecificData || {}
+      roleSpecificData: roleSpecificData || {},
+      ...(location ? { location } : {})
     });
 
     if (user) {

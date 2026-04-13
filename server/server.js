@@ -67,6 +67,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/farmers', require('./routes/farmerRoutes'));
 app.use('/api/impact', require('./routes/impactRoutes'));
 app.use('/api/negotiations', require('./routes/negotiationRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
