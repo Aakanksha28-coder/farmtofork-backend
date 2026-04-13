@@ -1,74 +1,23 @@
-const Order   = require('../models/Order');
-const Product = require('../models/Product');
-const User    = require('../models/User');
-const sendWhatsApp = require('../utils/whatsapp');
+const Order        = require('../models/Order');
+const Product      = require('../models/Product');
+const User         = require('../models/User');
+const Notification = require('../models/Notification');
 const sendEmail    = require('../utils/sendEmail');
 const tmpl         = require('../utils/emailTemplates');
 
-// ── WhatsApp message builders ─────────────────────────────────────────────────
-
-const STATUS_TEXT = {
-  confirmed: 'Your order has been accepted by the farmer. 🌾',
-  on_route:  'Your order is on the way! 🚚',
-  shipped:   'Your order has been shipped. 📦',
-  delivered: 'Your order has been delivered successfully. ✅',
-  received:  'Order marked as received. Enjoy your fresh produce! 🥦',
-  cancelled: 'Your order has been cancelled. ❌',
-  pending:   'Your order is pending confirmation. ⏳'
-};
-
-const waOrderConfirm = (order, customerName, farmerName) =>
-  [
-    `*FarmToFork — Order Confirmed* 🛒`,
-    `Hi ${customerName}, your order is placed!`,
-    ``,
-    `Order ID: #${String(order._id).slice(-6).toUpperCase()}`,
-    `Farmer: ${farmerName || 'N/A'}`,
-    ``,
-    `*Items:*`,
-    ...(order.items || []).map(i => `  • ${i.name} x${i.quantity} @ ₹${i.price}`),
-    ``,
-    `*Total: ₹${order.totalPrice}*`,
-    `Payment: ${(order.paymentMethod || 'cod').toUpperCase()}`,
-    ``,
-    `Thank you for shopping with FarmToFork! 🌿`
-  ].join('\n');
-
-const waNewOrderFarmer = (order, customerName) =>
-  [
-    `*FarmToFork — New Order* 🔔`,
-    `Hi! New order from ${customerName}.`,
-    ``,
-    `Order ID: #${String(order._id).slice(-6).toUpperCase()}`,
-    ...(order.items || []).map(i => `  • ${i.name} x${i.quantity}`),
-    ``,
-    `*Total: ₹${order.totalPrice}*`,
-    `Log in to confirm the order.`
-  ].join('\n');
-
-const waStatusUpdate = (order, status, note, recipientName) =>
-  [
-    `*FarmToFork — Order Update* 📬`,
-    `Hi ${recipientName},`,
-    ``,
-    `Order #${String(order._id).slice(-6).toUpperCase()}`,
-    `Status: *${status.toUpperCase()}*`,
-    note ? `Note: ${note}` : null,
-    ``,
-    STATUS_TEXT[status] || 'Your order has been updated.'
-  ].filter(Boolean).join('\n');
-
-// ── Fire-and-forget dual notifications (WhatsApp + Email) ────────────────────
-const notifyUser = async ({ phone, email, waMsg, emailSubject, emailHtml }) => {
+// ── Helper: create in-app notification + send email ──────────────────────────
+const notify = async ({ userId, orderId, title, message, email, emailSubject, emailHtml }) => {
   await Promise.allSettled([
-    phone ? sendWhatsApp(phone, waMsg) : Promise.resolve(),
+    // 1. Save in-app notification to DB
+    Notification.create({ user: userId, orderId, title, message }),
+    // 2. Send email (silently skipped if EMAIL_USER/PASS not set)
     email ? sendEmail(email, emailSubject, emailHtml) : Promise.resolve()
   ]);
 };
 
 // ── Controllers ───────────────────────────────────────────────────────────────
 
-// POST /api/orders — customer places an order
+// POST /api/orders
 exports.createOrder = async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod = 'cod', shippingPrice = 0 } = req.body;
@@ -105,30 +54,35 @@ exports.createOrder = async (req, res) => {
       tracking: [{ status: 'pending', note: 'Order created' }]
     });
 
-    // ── Notify customer + farmer ──────────────────────────────
+    // ── Notifications ─────────────────────────────────────────
     try {
-      const customer = await User.findById(req.user._id).select('name email whatsapp');
-      const farmer   = farmerId ? await User.findById(farmerId).select('name email whatsapp') : null;
+      const customer = await User.findById(req.user._id).select('name email');
+      const farmer   = farmerId ? await User.findById(farmerId).select('name email') : null;
+      const shortId  = `#${String(order._id).slice(-6).toUpperCase()}`;
 
-      // Customer: order confirmation
-      const custEmail = tmpl.orderPlacedCustomer(order, customer?.name, farmer?.name);
-      await notifyUser({
-        phone:        customer?.whatsapp,
-        email:        customer?.email,
-        waMsg:        waOrderConfirm(order, customer?.name, farmer?.name),
-        emailSubject: custEmail.subject,
-        emailHtml:    custEmail.html
+      // Customer notification
+      const custTmpl = tmpl.orderPlacedCustomer(order, customer?.name, farmer?.name);
+      await notify({
+        userId:      customer._id,
+        orderId:     order._id,
+        title:       `Order ${shortId} Confirmed`,
+        message:     `Your order has been placed. Total: ₹${order.totalPrice}`,
+        email:       customer?.email,
+        emailSubject: custTmpl.subject,
+        emailHtml:   custTmpl.html
       });
 
-      // Farmer: new order alert
+      // Farmer notification
       if (farmer) {
-        const farmEmail = tmpl.newOrderFarmer(order, customer?.name, farmer?.name);
-        await notifyUser({
-          phone:        farmer.whatsapp,
-          email:        farmer.email,
-          waMsg:        waNewOrderFarmer(order, customer?.name),
-          emailSubject: farmEmail.subject,
-          emailHtml:    farmEmail.html
+        const farmTmpl = tmpl.newOrderFarmer(order, customer?.name, farmer?.name);
+        await notify({
+          userId:      farmer._id,
+          orderId:     order._id,
+          title:       `New Order ${shortId}`,
+          message:     `${customer?.name} placed an order. Total: ₹${order.totalPrice}`,
+          email:       farmer?.email,
+          emailSubject: farmTmpl.subject,
+          emailHtml:   farmTmpl.html
         });
       }
     } catch (err) {
@@ -175,7 +129,7 @@ exports.getOrdersForFarmer = async (req, res) => {
   }
 };
 
-// PUT /api/orders/:id/status — farmer updates order status → notify customer (+ farmer on delivery)
+// PUT /api/orders/:id/status
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { status, note } = req.body;
@@ -195,30 +149,46 @@ exports.updateOrderStatus = async (req, res) => {
     order.tracking.push({ status: order.status, note: note || 'Status updated' });
     await order.save();
 
-    // ── Notify customer (always) + farmer (on delivered/received) ────────────
+    // ── Notifications ─────────────────────────────────────────
     try {
-      const customer = await User.findById(order.customer).select('name email whatsapp');
-      const farmer   = order.farmer ? await User.findById(order.farmer).select('name email whatsapp') : null;
+      const customer = await User.findById(order.customer).select('name email');
+      const farmer   = order.farmer ? await User.findById(order.farmer).select('name email') : null;
+      const shortId  = `#${String(order._id).slice(-6).toUpperCase()}`;
+
+      const STATUS_LABEL = {
+        confirmed: 'Confirmed by farmer 🌾',
+        on_route:  'On the way 🚚',
+        shipped:   'Shipped 📦',
+        delivered: 'Delivered ✅',
+        received:  'Received 🥦',
+        cancelled: 'Cancelled ❌',
+        pending:   'Pending ⏳'
+      };
+      const label = STATUS_LABEL[status] || status;
 
       // Always notify customer
-      const custEmail = tmpl.statusUpdateCustomer(order, status, note, customer?.name);
-      await notifyUser({
-        phone:        customer?.whatsapp,
-        email:        customer?.email,
-        waMsg:        waStatusUpdate(order, status, note, customer?.name || 'Customer'),
-        emailSubject: custEmail.subject,
-        emailHtml:    custEmail.html
+      const custTmpl = tmpl.statusUpdateCustomer(order, status, note, customer?.name);
+      await notify({
+        userId:      customer._id,
+        orderId:     order._id,
+        title:       `Order ${shortId}: ${label}`,
+        message:     note || custTmpl.subject,
+        email:       customer?.email,
+        emailSubject: custTmpl.subject,
+        emailHtml:   custTmpl.html
       });
 
-      // Notify farmer when order is delivered or received
+      // Notify farmer on delivered / received
       if (farmer && (status === 'delivered' || status === 'received')) {
-        const farmEmail = tmpl.statusUpdateFarmer(order, status, farmer.name);
-        await notifyUser({
-          phone:        farmer.whatsapp,
-          email:        farmer.email,
-          waMsg:        waStatusUpdate(order, status, note, farmer.name || 'Farmer'),
-          emailSubject: farmEmail.subject,
-          emailHtml:    farmEmail.html
+        const farmTmpl = tmpl.statusUpdateFarmer(order, status, farmer.name);
+        await notify({
+          userId:      farmer._id,
+          orderId:     order._id,
+          title:       `Order ${shortId}: ${label}`,
+          message:     `Order marked as ${status}`,
+          email:       farmer?.email,
+          emailSubject: farmTmpl.subject,
+          emailHtml:   farmTmpl.html
         });
       }
     } catch (err) {
@@ -238,14 +208,11 @@ exports.updateOrderLocation = async (req, res) => {
     const { lat, lng } = req.body;
     if (typeof lat !== 'number' || typeof lng !== 'number')
       return res.status(400).json({ message: 'lat and lng must be numbers' });
-
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
-
     const isAdmin       = req.user?.role === 'admin';
     const isFarmerOwner = order.farmer && order.farmer.toString() === req.user._id.toString();
     if (!isAdmin && !isFarmerOwner) return res.status(403).json({ message: 'Forbidden' });
-
     order.currentLocation = { lat, lng, updatedAt: new Date() };
     await order.save();
     res.json(order.currentLocation);
@@ -259,16 +226,13 @@ exports.getOrderLocation = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
-
     const isCustomer    = order.customer.toString() === req.user._id.toString();
     const isAdmin       = req.user?.role === 'admin';
     const isFarmerOwner = order.farmer && order.farmer.toString() === req.user._id.toString();
     if (!isCustomer && !isAdmin && !isFarmerOwner)
       return res.status(403).json({ message: 'Forbidden' });
-
     if (!order.currentLocation)
       return res.status(404).json({ message: 'No location available' });
-
     res.json(order.currentLocation);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
