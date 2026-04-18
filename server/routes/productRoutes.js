@@ -12,22 +12,16 @@ const {
   getPoojaProducts
 } = require('../controllers/productController');
 
-// Multer setup for image upload
+// Multer setup — memory storage, convert to base64 in controller (no filesystem dependency)
 const multer = require('multer');
-const path = require('path');
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.\-]/g, '_');
-    cb(null, Date.now() + '-' + safeName);
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/image\/(jpeg|jpg|png|webp)/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Images only'));
   }
 });
-const imageFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-  if (allowed.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('Only JPG, PNG, WEBP images allowed'));
-};
-const upload = multer({ storage, fileFilter: imageFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // Public: list products and upcoming
 router.get('/', getProducts);

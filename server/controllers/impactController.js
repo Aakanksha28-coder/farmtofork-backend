@@ -23,7 +23,9 @@ const createStory = asyncHandler(async (req, res) => {
     quote,
     stats: JSON.parse(stats),
     author: req.user._id,
-    imageUrl: req.file ? `/uploads/${req.file.filename}` : '',
+    imageUrl: req.file
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+      : '',
   });
 
   const createdStory = await story.save();
