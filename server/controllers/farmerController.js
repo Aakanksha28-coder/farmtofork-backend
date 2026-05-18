@@ -18,15 +18,19 @@ exports.getNearbyFarmers = async (req, res) => {
 
     const maxDistance = radius * 1000; // metres
 
+    // Use $geoWithin with $centerSphere — works without a 2dsphere index
+    // $centerSphere uses radians: divide km by Earth's radius (6378.1 km)
+    const radiusInRadians = radius / 6378.1;
+
     const farmers = await User.find({
       role: 'farmer',
+      'location.coordinates': { $exists: true },
       location: {
-        $near: {
-          $geometry: { type: 'Point', coordinates: [lng, lat] },
-          $maxDistance: maxDistance
+        $geoWithin: {
+          $centerSphere: [[lng, lat], radiusInRadians]
         }
       }
-    }).select('name roleSpecificData location whatsapp').limit(50);
+    }).select('name roleSpecificData location').limit(50);
 
     // Attach product count + up to 3 sample products per farmer
     const results = await Promise.all(

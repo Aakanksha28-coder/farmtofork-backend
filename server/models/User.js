@@ -13,9 +13,9 @@ const UserSchema = new mongoose.Schema({
   emailOtp:           { type: String },
   emailOtpExpires:    { type: Date },
 
-  // Geospatial — stored as a plain object, index applied below
-  // Using Mixed type avoids Mongoose's nested-type validation conflict
-  location: { type: mongoose.Schema.Types.Mixed, default: undefined },
+  // Geospatial coordinates stored as plain object { type, coordinates }
+  // Index is created manually as sparse to avoid startup crash on Mixed fields
+  location: { type: mongoose.Schema.Types.Mixed },
 
   createdAt: { type: Date, default: Date.now }
 });
@@ -34,7 +34,9 @@ UserSchema.methods.comparePassword = async function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
-// 2dsphere index — MongoDB handles GeoJSON validation at the DB level
-UserSchema.index({ location: '2dsphere' }, { sparse: true });
+// NOTE: 2dsphere index is created directly in MongoDB/Atlas, not via Mongoose
+// to avoid startup crash with Mixed type fields.
+// Run this once in MongoDB shell if needed:
+// db.users.createIndex({ location: "2dsphere" }, { sparse: true })
 
 module.exports = mongoose.model('User', UserSchema);
