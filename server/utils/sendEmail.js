@@ -1,7 +1,11 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// Force Node.js to resolve DNS using IPv4 — fixes ENETUNREACH on Render's IPv6-blocked network
+dns.setDefaultResultOrder('ipv4first');
 
 /**
- * Send email via Gmail SMTP — forced IPv4 to avoid Render's IPv6 block.
+ * Send email via Gmail SMTP.
  */
 const sendEmail = async (to, subject, html) => {
   const user = (process.env.EMAIL_USER || '').trim();
@@ -14,11 +18,12 @@ const sendEmail = async (to, subject, html) => {
   if (!to) return;
 
   const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',   // explicit host instead of service:'gmail'
-    port: 465,
-    secure: true,             // SSL
-    family: 4,                // ← force IPv4, avoids ENETUNREACH on Render
-    auth: { user, pass }
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: false }
   });
 
   try {
