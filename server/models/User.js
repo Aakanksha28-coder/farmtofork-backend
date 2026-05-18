@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt   = require('bcryptjs');
-const crypto   = require('crypto');
 
 const UserSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true },
@@ -11,8 +10,8 @@ const UserSchema = new mongoose.Schema({
 
   // Email verification
   isEmailVerified:    { type: Boolean, default: false },
-  emailVerifyToken:   { type: String },
-  emailVerifyExpires: { type: Date },
+  emailOtp:           { type: String },
+  emailOtpExpires:    { type: Date },
 
   // Geospatial — stored as a plain object, index applied below
   // Using Mixed type avoids Mongoose's nested-type validation conflict
@@ -33,14 +32,6 @@ UserSchema.pre('save', async function (next) {
 
 UserSchema.methods.comparePassword = async function (candidate) {
   return bcrypt.compare(candidate, this.password);
-};
-
-// Generate email verification token (raw token sent in email, hashed stored in DB)
-UserSchema.methods.generateVerifyToken = function () {
-  const token = crypto.randomBytes(32).toString('hex');
-  this.emailVerifyToken   = crypto.createHash('sha256').update(token).digest('hex');
-  this.emailVerifyExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-  return token;
 };
 
 // 2dsphere index — MongoDB handles GeoJSON validation at the DB level
