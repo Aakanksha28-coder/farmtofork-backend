@@ -19,8 +19,11 @@ exports.registerUser = async (req, res) => {
     if (await User.findOne({ email }))
       return res.status(400).json({ message: 'User already exists' });
 
-    const location = (lat != null && lng != null)
-      ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] }
+    // Only build GeoJSON if both lat and lng are valid numbers
+    const parsedLat = parseFloat(lat);
+    const parsedLng = parseFloat(lng);
+    const location = (!isNaN(parsedLat) && !isNaN(parsedLng) && lat != null && lng != null)
+      ? { type: 'Point', coordinates: [parsedLng, parsedLat] }
       : undefined;
 
     const user = await User.create({
@@ -67,7 +70,14 @@ exports.registerUser = async (req, res) => {
         : 'Account created successfully!'
     });
   } catch (error) {
-    console.error(error);
+    console.error('Register error:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(e => e.message).join(', ');
+      return res.status(400).json({ message: `Validation error: ${messages}` });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
