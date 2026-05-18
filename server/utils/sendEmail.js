@@ -1,40 +1,37 @@
-const nodemailer = require('nodemailer');
-const dns = require('dns');
-
-// Force Node.js to resolve DNS using IPv4 — fixes ENETUNREACH on Render's IPv6-blocked network
-dns.setDefaultResultOrder('ipv4first');
+const { Resend } = require('resend');
 
 /**
- * Send email via Gmail SMTP.
+ * Send email via Resend (HTTPS API — works on Render free tier, no SMTP port blocking).
+ * Free plan: 3000 emails/month, 100/day.
+ *
+ * Setup:
+ *   1. Sign up at https://resend.com (free)
+ *   2. Add & verify your domain OR use the free onboarding address
+ *   3. Create an API key → add to Render env as RESEND_API_KEY
+ *   4. Set EMAIL_FROM to your verified sender e.g. "FarmToFork <noreply@yourdomain.com>"
+ *      (or use Resend's shared domain: "FarmToFork <onboarding@resend.dev>" for testing)
  */
 const sendEmail = async (to, subject, html) => {
-  const user = (process.env.EMAIL_USER || '').trim();
-  const pass = (process.env.EMAIL_PASS || '').trim();
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
 
-  if (!user || !pass) {
-    console.warn('⚠️  EMAIL_USER / EMAIL_PASS not set — email skipped');
+  if (!apiKey) {
+    console.warn('⚠️  RESEND_API_KEY not set — email skipped');
     return;
   }
   if (!to) return;
 
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    requireTLS: true,
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false }
-  });
+  const from = (process.env.EMAIL_FROM || 'FarmToFork <onboarding@resend.dev>').trim();
+
+  const resend = new Resend(apiKey);
 
   try {
-    const info = await transporter.sendMail({
-      from: `"FarmToFork 🌾" <${user}>`,
-      to,
-      subject,
-      html
-    });
-    console.log(`✅ Email sent to ${to} — ${info.messageId}`);
-    return info;
+    const { data, error } = await resend.emails.send({ from, to, subject, html });
+    if (error) {
+      console.error(`❌ Resend error to ${to}:`, error.message || JSON.stringify(error));
+      throw new Error(error.message || 'Resend API error');
+    }
+    console.log(`✅ Email sent to ${to} — id: ${data?.id}`);
+    return data;
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
     throw err;
