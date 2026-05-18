@@ -29,32 +29,42 @@ exports.registerUser = async (req, res) => {
       ...(location ? { location } : {})
     });
 
-    // Generate email verification token and send
-    const rawToken = user.generateVerifyToken();
-    await user.save({ validateBeforeSave: false });
+    // If email is configured, send verification; otherwise auto-verify
+    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
 
-    const verifyUrl = `${FRONTEND}/verify-email?token=${rawToken}`;
-    await sendEmail(
-      email,
-      '✅ Verify your FarmToFork email',
-      `
-      <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:24px;border-radius:10px;border:1px solid #e0e0e0">
-        <h2 style="color:#2e7d32">Welcome to FarmToFork, ${name}! 🌾</h2>
-        <p>Please verify your email address to activate your account.</p>
-        <a href="${verifyUrl}"
-           style="display:inline-block;background:#4CAF50;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:700;margin:16px 0">
-          Verify Email
-        </a>
-        <p style="color:#888;font-size:12px">This link expires in 24 hours. If you didn't sign up, ignore this email.</p>
-      </div>`
-    );
+    if (emailConfigured) {
+      const rawToken = user.generateVerifyToken();
+      await user.save({ validateBeforeSave: false });
+
+      const verifyUrl = `${FRONTEND}/verify-email?token=${rawToken}`;
+      await sendEmail(
+        email,
+        '✅ Verify your FarmToFork email',
+        `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:24px;border-radius:10px;border:1px solid #e0e0e0">
+          <h2 style="color:#2e7d32">Welcome to FarmToFork, ${name}! 🌾</h2>
+          <p>Please verify your email address to activate your account.</p>
+          <a href="${verifyUrl}"
+             style="display:inline-block;background:#4CAF50;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:700;margin:16px 0">
+            Verify Email
+          </a>
+          <p style="color:#888;font-size:12px">This link expires in 24 hours. If you didn't sign up, ignore this email.</p>
+        </div>`
+      );
+    } else {
+      // No email configured — auto-verify so users can log in immediately
+      user.isEmailVerified = true;
+      await user.save({ validateBeforeSave: false });
+    }
 
     const token = generateToken(user._id);
     res.status(201).json({
       _id: user._id, name: user.name, email: user.email,
       role: user.role, roleSpecificData: user.roleSpecificData,
-      isEmailVerified: false, token,
-      message: 'Account created! Please check your email to verify your account.'
+      isEmailVerified: user.isEmailVerified, token,
+      message: emailConfigured
+        ? 'Account created! Please check your email to verify your account.'
+        : 'Account created successfully!'
     });
   } catch (error) {
     console.error(error);
@@ -95,7 +105,8 @@ exports.loginUser = async (req, res) => {
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ message: 'Invalid email or password' });
 
-    if (!user.isEmailVerified)
+    // Only enforce email verification if email is configured
+    if (!user.isEmailVerified && process.env.EMAIL_USER && process.env.EMAIL_PASS)
       return res.status(403).json({
         message: 'Please verify your email before logging in. Check your inbox.',
         needsVerification: true

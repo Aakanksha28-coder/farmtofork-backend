@@ -12,10 +12,13 @@ const UserSchema = new mongoose.Schema({
   isEmailVerified: { type: Boolean, default: false },
   emailVerifyToken: { type: String },
   emailVerifyExpires: { type: Date },
-  // GeoJSON location for geospatial queries (farmers)
+  // GeoJSON location for geospatial queries (farmers) — only set when coordinates are provided
   location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: { type: [Number], default: undefined }
+    type: {
+      type: String,
+      enum: ['Point']
+    },
+    coordinates: [Number]  // [longitude, latitude] — sparse, only stored when provided
   },
   createdAt: { type: Date, default: Date.now }
 });
