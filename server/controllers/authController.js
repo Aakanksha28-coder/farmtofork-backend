@@ -68,7 +68,7 @@ exports.registerUser = async (req, res) => {
     });
 
     // Send OTP email
-    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    const emailConfigured = !!(process.env.RESEND_API_KEY);
     if (emailConfigured) {
       try {
         await sendEmail(email, '🔐 Your FarmToFork Verification Code', `
@@ -88,12 +88,12 @@ exports.registerUser = async (req, res) => {
           </div>`);
         console.log(`✅ OTP email sent to ${email}`);
       } catch (emailErr) {
+        // Email failed (e.g. Resend test mode restriction) — log OTP to console for debugging
         console.error(`❌ OTP email FAILED for ${email}:`, emailErr.message);
-        // Still return success — user can use resend
+        console.log(`🔐 OTP for ${email} (use this to test): ${otp}`);
       }
     } else {
       console.log('📧 Email not configured — auto-verifying user');
-      // No email configured — auto-verify
       user.isEmailVerified = true;
       user.emailOtp        = undefined;
       user.emailOtpExpires = undefined;
@@ -202,7 +202,7 @@ exports.loginUser = async (req, res) => {
     if (!user || !(await user.comparePassword(password)))
       return res.status(401).json({ message: 'Invalid email or password' });
 
-    const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+    const emailConfigured = !!(process.env.RESEND_API_KEY);
     if (emailConfigured && !user.isEmailVerified)
       return res.status(403).json({
         message: 'Please verify your email before logging in.',

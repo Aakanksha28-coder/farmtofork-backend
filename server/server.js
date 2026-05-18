@@ -102,17 +102,18 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Temporary email test endpoint — remove after confirming email works
+// Temporary email test endpoint
 app.get('/test-email', async (req, res) => {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
   const from   = (process.env.EMAIL_FROM || 'FarmToFork <onboarding@resend.dev>').trim();
-  const to     = (process.env.EMAIL_USER || '').trim(); // send test to EMAIL_USER
+  // In Resend test mode, can only send to the account owner email
+  const to     = (process.env.RESEND_TEST_TO || process.env.EMAIL_USER || '').trim();
 
   if (!apiKey) return res.json({ configured: false, missing: 'RESEND_API_KEY' });
 
   const sendEmail = require('./utils/sendEmail');
   try {
-    await sendEmail(to || 'test@example.com', 'FarmToFork Email Test ✅', '<h2>Email is working! ✅</h2><p>Resend is configured correctly.</p>');
+    await sendEmail(to, 'FarmToFork Email Test ✅', '<h2>Email is working! ✅</h2><p>Resend is configured correctly.</p>');
     res.json({ configured: true, from, to, status: 'Email sent — check inbox' });
   } catch (err) {
     res.json({ configured: true, from, to, error: err.message });

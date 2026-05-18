@@ -1,15 +1,17 @@
 const { Resend } = require('resend');
 
 /**
- * Send email via Resend (HTTPS API — works on Render free tier, no SMTP port blocking).
- * Free plan: 3000 emails/month, 100/day.
+ * Send email via Resend HTTPS API.
  *
- * Setup:
- *   1. Sign up at https://resend.com (free)
- *   2. Add & verify your domain OR use the free onboarding address
- *   3. Create an API key → add to Render env as RESEND_API_KEY
- *   4. Set EMAIL_FROM to your verified sender e.g. "FarmToFork <noreply@yourdomain.com>"
- *      (or use Resend's shared domain: "FarmToFork <onboarding@resend.dev>" for testing)
+ * IMPORTANT — Resend free/test mode restriction:
+ *   Without a verified domain, you can ONLY send to the Resend account owner email.
+ *   To send to any email: verify a domain at https://resend.com/domains
+ *   Then set EMAIL_FROM=FarmToFork <noreply@yourdomain.com>
+ *
+ * Required Render env vars:
+ *   RESEND_API_KEY  — from resend.com dashboard
+ *   EMAIL_FROM      — e.g. "FarmToFork <onboarding@resend.dev>"  (test)
+ *                     or   "FarmToFork <noreply@yourdomain.com>" (production)
  */
 const sendEmail = async (to, subject, html) => {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
@@ -21,7 +23,6 @@ const sendEmail = async (to, subject, html) => {
   if (!to) return;
 
   const from = (process.env.EMAIL_FROM || 'FarmToFork <onboarding@resend.dev>').trim();
-
   const resend = new Resend(apiKey);
 
   try {
