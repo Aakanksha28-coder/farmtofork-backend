@@ -1,35 +1,28 @@
 const nodemailer = require('nodemailer');
 
-// Lazily create transporter so missing env vars don't crash on startup
-let transporter = null;
-const getTransporter = () => {
-  if (!transporter) {
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASS;
-    if (!user || !pass) {
-      console.warn('⚠️  EMAIL_USER / EMAIL_PASS not set — email notifications disabled');
-      return null;
-    }
-    transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user, pass }
-    });
-  }
-  return transporter;
-};
-
 /**
  * Send an email via Gmail SMTP.
- * @param {string} to      - recipient email
- * @param {string} subject - email subject
- * @param {string} html    - HTML body
+ * Creates a fresh transporter each call so env var changes are always picked up.
  */
 const sendEmail = async (to, subject, html) => {
-  const t = getTransporter();
-  if (!t || !to) return;
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').trim();
+
+  if (!user || !pass) {
+    console.warn('⚠️  EMAIL_USER / EMAIL_PASS not set — email skipped');
+    return;
+  }
+
+  if (!to) return;
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass }
+  });
+
   try {
-    const info = await t.sendMail({
-      from: `"FarmToFork 🌾" <${process.env.EMAIL_USER}>`,
+    const info = await transporter.sendMail({
+      from: `"FarmToFork 🌾" <${user}>`,
       to,
       subject,
       html
@@ -37,6 +30,7 @@ const sendEmail = async (to, subject, html) => {
     console.log(`✅ Email sent to ${to} — ${info.messageId}`);
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
+    // Don't throw — email failure should never break the main flow
   }
 };
 
