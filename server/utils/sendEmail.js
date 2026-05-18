@@ -1,8 +1,7 @@
 const nodemailer = require('nodemailer');
 
 /**
- * Send an email via Gmail SMTP.
- * Creates a fresh transporter each call so env var changes are always picked up.
+ * Send email via Gmail SMTP — forced IPv4 to avoid Render's IPv6 block.
  */
 const sendEmail = async (to, subject, html) => {
   const user = (process.env.EMAIL_USER || '').trim();
@@ -12,11 +11,13 @@ const sendEmail = async (to, subject, html) => {
     console.warn('⚠️  EMAIL_USER / EMAIL_PASS not set — email skipped');
     return;
   }
-
   if (!to) return;
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',   // explicit host instead of service:'gmail'
+    port: 465,
+    secure: true,             // SSL
+    family: 4,                // ← force IPv4, avoids ENETUNREACH on Render
     auth: { user, pass }
   });
 
@@ -31,7 +32,7 @@ const sendEmail = async (to, subject, html) => {
     return info;
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
-    throw err; // re-throw so callers can handle/log
+    throw err;
   }
 };
 
