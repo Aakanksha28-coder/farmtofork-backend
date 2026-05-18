@@ -28,9 +28,10 @@ const sendEmail = async (to, subject, html) => {
       html
     });
     console.log(`✅ Email sent to ${to} — ${info.messageId}`);
+    return info;
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
-    // Don't throw — email failure should never break the main flow
+    throw err; // re-throw so callers can handle/log
   }
 };
 

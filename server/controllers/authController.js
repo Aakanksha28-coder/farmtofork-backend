@@ -70,22 +70,29 @@ exports.registerUser = async (req, res) => {
     // Send OTP email
     const emailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
     if (emailConfigured) {
-      await sendEmail(email, '🔐 Your FarmToFork Verification Code', `
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
-          <div style="background:linear-gradient(135deg,#4CAF50,#2e7d32);padding:28px;text-align:center">
-            <h1 style="color:#fff;margin:0;font-size:22px">🌾 FarmToFork</h1>
-          </div>
-          <div style="padding:32px;background:#fff;text-align:center">
-            <h2 style="color:#2e7d32;margin-top:0">Verify Your Email</h2>
-            <p style="color:#555">Hi <strong>${name}</strong>, use this OTP to verify your account:</p>
-            <div style="background:#f1f8e9;border:2px dashed #4CAF50;border-radius:12px;padding:20px;margin:20px 0;display:inline-block">
-              <span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#2e7d32">${otp}</span>
+      try {
+        await sendEmail(email, '🔐 Your FarmToFork Verification Code', `
+          <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
+            <div style="background:linear-gradient(135deg,#4CAF50,#2e7d32);padding:28px;text-align:center">
+              <h1 style="color:#fff;margin:0;font-size:22px">🌾 FarmToFork</h1>
             </div>
-            <p style="color:#888;font-size:13px">This OTP expires in <strong>10 minutes</strong>.</p>
-            <p style="color:#aaa;font-size:12px">If you didn't sign up for FarmToFork, ignore this email.</p>
-          </div>
-        </div>`);
+            <div style="padding:32px;background:#fff;text-align:center">
+              <h2 style="color:#2e7d32;margin-top:0">Verify Your Email</h2>
+              <p style="color:#555">Hi <strong>${name}</strong>, use this OTP to verify your account:</p>
+              <div style="background:#f1f8e9;border:2px dashed #4CAF50;border-radius:12px;padding:20px;margin:20px 0;display:inline-block">
+                <span style="font-size:40px;font-weight:900;letter-spacing:12px;color:#2e7d32">${otp}</span>
+              </div>
+              <p style="color:#888;font-size:13px">This OTP expires in <strong>10 minutes</strong>.</p>
+              <p style="color:#aaa;font-size:12px">If you didn't sign up for FarmToFork, ignore this email.</p>
+            </div>
+          </div>`);
+        console.log(`✅ OTP email sent to ${email}`);
+      } catch (emailErr) {
+        console.error(`❌ OTP email FAILED for ${email}:`, emailErr.message);
+        // Still return success — user can use resend
+      }
     } else {
+      console.log('📧 Email not configured — auto-verifying user');
       // No email configured — auto-verify
       user.isEmailVerified = true;
       user.emailOtp        = undefined;

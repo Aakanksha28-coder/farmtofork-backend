@@ -102,6 +102,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Temporary email test endpoint — remove after confirming email works
+app.get('/test-email', async (req, res) => {
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').trim();
+  if (!user || !pass) return res.json({ configured: false, user: user || 'NOT SET', pass: pass ? 'SET' : 'NOT SET' });
+  
+  const sendEmail = require('./utils/sendEmail');
+  try {
+    await sendEmail(user, 'FarmToFork Email Test', '<h2>Email is working! ✅</h2>');
+    res.json({ configured: true, user, status: 'Email sent — check inbox' });
+  } catch (err) {
+    res.json({ configured: true, user, error: err.message });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
