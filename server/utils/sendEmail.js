@@ -1,39 +1,58 @@
-const { Resend } = require('resend');
-
 /**
- * Send email via Resend HTTPS API (no SMTP, works on Render free tier).
- * Env vars needed on Render:
- *   RESEND_API_KEY  — from resend.com dashboard
- *   EMAIL_FROM      — e.g. "FarmToFork <onboarding@resend.dev>"
- *                     Use onboarding@resend.dev for testing (sends only to Resend account email)
- *                     For production: verify domain at resend.com/domains
+ * Send email via Brevo (formerly Sendinblue) — HTTPS API, works on Render free tier.
+ * Free plan: 300 emails/day, sends to ANY email, no domain verification needed.
+ *
+ * Setup (2 minutes):
+ *   1. Sign up at https://app.brevo.com (free)
+ *   2. Go to SMTP & API → API Keys → Generate API key
+ *   3. Add to Render env: BREVO_API_KEY=your_key
+ *   4. Add to Render env: EMAIL_FROM=FarmToFork <aakankshamore2805@gmail.com>
+ *      (must be a verified sender — verify at Brevo → Senders & IPs → Senders)
  */
+
 const sendEmail = async (to, subject, html, text = '') => {
-  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  const apiKey = (process.env.BREVO_API_KEY || '').trim();
 
   if (!apiKey) {
-    console.warn('⚠️  RESEND_API_KEY not set — email skipped');
-    console.log(`📧 Would have sent to ${to}: ${subject}`);
+    console.warn('⚠️  BREVO_API_KEY not set — email skipped');
     return null;
   }
+  if (!to) return null;
 
-  if (!to) throw new Error('Recipient email is required');
+  const fromRaw  = (process.env.EMAIL_FROM || 'FarmToFork <aakankshamore2805@gmail.com>').trim();
+  // Parse "Name <email>" format
+  const match    = fromRaw.match(/^(.*?)\s*<(.+?)>$/);
+  const fromName  = match ? match[1].trim() : 'FarmToFork';
+  const fromEmail = match ? match[2].trim() : fromRaw;
 
-  const from = (process.env.EMAIL_FROM || 'FarmToFork <onboarding@resend.dev>').trim();
-  const resend = new Resend(apiKey);
+  const payload = {
+    sender:   { name: fromName, email: fromEmail },
+    to:       [{ email: to }],
+    subject,
+    htmlContent: html,
+    ...(text ? { textContent: text } : {})
+  };
 
   try {
-    const { data, error } = await resend.emails.send({
-      from, to, subject, html,
-      ...(text ? { text } : {})
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method:  'POST',
+      headers: {
+        'accept':       'application/json',
+        'api-key':      apiKey,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(payload)
     });
 
-    if (error) {
-      console.error(`❌ Resend error to ${to}:`, error.message || JSON.stringify(error));
-      throw new Error(error.message || 'Email send failed');
+    const data = await res.json();
+
+    if (!res.ok) {
+      const msg = data?.message || JSON.stringify(data);
+      console.error(`❌ Brevo error to ${to}:`, msg);
+      throw new Error(msg);
     }
 
-    console.log(`✅ Email sent to ${to} — id: ${data?.id}`);
+    console.log(`✅ Email sent to ${to} — messageId: ${data?.messageId}`);
     return data;
   } catch (err) {
     console.error(`❌ Email failed to ${to}:`, err.message);
