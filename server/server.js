@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const morgan = require('morgan');
+const { cleanupExpiredOtps } = require('./controllers/authController');
 
 // Load env vars
 dotenv.config();
@@ -27,10 +28,16 @@ const User = require('./models/User');
     }
     const existingAdmin = await User.findOne({ role: 'admin' });
     if (existingAdmin) {
+      if (!existingAdmin.isVerified) {
+        existingAdmin.isVerified = true;
+        existingAdmin.otp = null;
+        existingAdmin.otpExpiry = null;
+        await existingAdmin.save({ validateBeforeSave: false });
+      }
       console.log('Admin user already exists:', existingAdmin.email);
       return;
     }
-    const admin = await User.create({ name, email, password, role: 'admin' });
+    const admin = await User.create({ name, email, password, role: 'admin', isVerified: true });
     console.log('Admin user created:', admin.email);
   } catch (err) {
     console.error('Admin seeding error:', err.message);
@@ -122,6 +129,8 @@ app.use((req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
+setInterval(cleanupExpiredOtps, 60 * 1000);
+cleanupExpiredOtps();
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 module.exports = app;

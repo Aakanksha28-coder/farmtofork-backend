@@ -1,188 +1,262 @@
-const User    = require('../models/User');
-const jwt     = require('jsonwebtoken');
-const sendSms = require('../utils/sendSms');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
+const { verificationOtpEmail } = require('../utils/emailTemplates');
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 
 const generateToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET || 'your_jwt_secret', { expiresIn: '30d' });
+  jwt.sign({ id }, process.env.JWT_SECRET || 'your_jwt_secret', {
+    expiresIn: process.env.JWT_EXPIRE || '7d'
+  });
 
-const makeOTP = () => String(Math.floor(100000 + Math.random() * 900000));
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 
-// ── Register ──────────────────────────────────────────────────────────────────
+const sanitizeUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+  roleSpecificData: user.roleSpecificData || {},
+  isVerified: user.isVerified,
+  createdAt: user.createdAt
+});
+
+const createLocationPayload = ({ lat, lng }) => {
+  const parsedLat = Number.parseFloat(lat);
+  const parsedLng = Number.parseFloat(lng);
+
+  if (Number.isNaN(parsedLat) || Number.isNaN(parsedLng)) {
+    return undefined;
+  }
+
+  return { type: 'Point', coordinates: [parsedLng, parsedLat] };
+};
+
+const sendOtpForUser = async (user) => {
+  const otp = generateOtp();
+  user.otp = otp;
+  user.otpExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
+  user.otpRequestedAt = new Date();
+  await user.save({ validateBeforeSave: false });
+
+  const template = verificationOtpEmail({
+    name: user.name,
+    otp,
+    brandName: process.env.BRAND_NAME || 'FarmToFork',
+    expiryMinutes: 5
+  });
+
+  await sendEmail(user.email, template.subject, template.html, template.text);
+};
+
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, role, roleSpecificData, phone, lat, lng } = req.body;
 
-    if (!name || !email || !password)
-      return res.status(400).json({ message: 'Name, email and password are required' });
-    if (!phone)
-      return res.status(400).json({ message: 'Mobile number is required for verification' });
-    if (role === 'admin')
+    if (role === 'admin') {
       return res.status(403).json({ message: 'Admin registration is restricted' });
-    if (await User.findOne({ email }))
-      return res.status(400).json({ message: 'User already exists with this email' });
+    }
 
-    const parsedLat = parseFloat(lat);
-    const parsedLng = parseFloat(lng);
-    const location  = (!isNaN(parsedLat) && !isNaN(parsedLng))
-      ? { type: 'Point', coordinates: [parsedLng, parsedLat] }
-      : undefined;
-
-    const otp = makeOTP();
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: existingAccountMessage(existingUser),
+        requiresVerification: !existingUser.isVerified,
+        email: existingUser.email
+      });
+    }
 
     const user = await User.create({
-      name, email, password,
-      phone: String(phone).replace(/\D/g, '').slice(-10),
+      name,
+      email,
+      password,
+      phone: String(phone || '').trim(),
       role: role || 'customer',
       roleSpecificData: roleSpecificData || {},
-      ...(location ? { location } : {}),
-      phoneOtp:        otp,
-      phoneOtpExpires: new Date(Date.now() + 10 * 60 * 1000),
-      isPhoneVerified: false
+      location: createLocationPayload({ lat, lng }),
+      isVerified: false
     });
 
-    // Send OTP via SMS
-    const smsSent = await sendSms(phone, `FarmToFork: Your OTP is ${otp}. Valid for 10 minutes. Do not share.`);
+    const emailConfigured = !!(process.env.RESEND_API_KEY);
+    let emailSent = false;
 
-    if (!smsSent) {
-      // SMS not configured — auto-verify so user isn't blocked
-      console.log(`🔐 OTP for ${phone}: ${otp}`);
-      user.isPhoneVerified = true;
-      user.phoneOtp        = undefined;
-      user.phoneOtpExpires = undefined;
+    if (emailConfigured) {
+      try {
+        await sendOtpForUser(user);
+        emailSent = true;
+      } catch (emailError) {
+        console.error('OTP email send error:', emailError.message);
+        // Log OTP to console so dev can test without email
+        console.log(`🔐 OTP for ${user.email}: ${user.otp}`);
+      }
+    } else {
+      // No email configured — auto-verify so user isn't blocked
+      console.log(`🔐 No email configured. OTP for ${user.email}: auto-verified`);
+      user.isVerified = true;
+      user.otp = null;
+      user.otpExpiry = null;
       await user.save({ validateBeforeSave: false });
     }
 
-    res.status(201).json({
-      _id: user._id, name: user.name, email: user.email,
-      phone: user.phone, role: user.role,
-      roleSpecificData: user.roleSpecificData,
-      isPhoneVerified: user.isPhoneVerified,
-      token: generateToken(user._id),
-      requiresOtp: !user.isPhoneVerified,
-      message: smsSent
-        ? `OTP sent to ${user.phone.slice(0,2)}XXXXXXXX${user.phone.slice(-2)}`
-        : 'Account created successfully!'
+    return res.status(201).json({
+      message: emailSent
+        ? 'Account created! Check your inbox for the 6-digit verification code.'
+        : emailConfigured
+          ? 'Account created. OTP email failed — use Resend OTP.'
+          : 'Account created successfully!',
+      email: user.email,
+      requiresVerification: !user.isVerified,
+      resendAvailableIn: 60,
+      user: sanitizeUser(user)
     });
   } catch (error) {
     console.error('Register error:', error.message);
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({ message: Object.values(error.errors).map(e => e.message).join(', ') });
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'An account with this email already exists' });
     }
-    if (error.code === 11000)
-      return res.status(400).json({ message: 'User already exists' });
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error while creating the account' });
   }
 };
 
-// ── Verify OTP ────────────────────────────────────────────────────────────────
 exports.verifyOtp = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp)
-      return res.status(400).json({ message: 'Phone and OTP are required' });
+    const { email, otp } = req.body;
+    const user = await User.findOne({ email });
 
-    const digits = String(phone).replace(/\D/g, '').slice(-10);
-    const user   = await User.findOne({ phone: digits });
-    if (!user)
-      return res.status(404).json({ message: 'No account found with this number' });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found for this email address' });
+    }
 
-    if (user.isPhoneVerified)
-      return res.json({ message: 'Phone already verified', alreadyVerified: true,
-        token: generateToken(user._id), _id: user._id, name: user.name,
-        email: user.email, phone: user.phone, role: user.role,
-        roleSpecificData: user.roleSpecificData, isPhoneVerified: true });
+    if (user.isVerified) {
+      return res.json({
+        message: 'Email already verified',
+        token: generateToken(user._id),
+        user: sanitizeUser(user)
+      });
+    }
 
-    if (!user.phoneOtp || user.phoneOtp !== String(otp))
+    if (!user.otp || !user.otpExpiry) {
+      return res.status(400).json({ message: 'No active OTP found. Please request a new code.' });
+    }
+
+    if (user.otpExpiry.getTime() < Date.now()) {
+      user.clearOtp();
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ message: 'OTP expired. Please request a new code.' });
+    }
+
+    if (user.otp !== otp) {
       return res.status(400).json({ message: 'Invalid OTP. Please try again.' });
+    }
 
-    if (user.phoneOtpExpires < Date.now())
-      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
-
-    user.isPhoneVerified = true;
-    user.phoneOtp        = undefined;
-    user.phoneOtpExpires = undefined;
+    user.isVerified = true;
+    user.clearOtp();
     await user.save({ validateBeforeSave: false });
 
-    // Welcome SMS
-    await sendSms(user.phone, `Welcome to FarmToFork, ${user.name}! Your account is verified. Start ${user.role === 'farmer' ? 'listing your produce' : 'shopping fresh produce'} now.`);
-
-    res.json({
-      message: `Welcome to FarmToFork, ${user.name}! 🌾`,
+    return res.json({
+      message: 'Email verified successfully. Welcome aboard.',
       token: generateToken(user._id),
-      _id: user._id, name: user.name, email: user.email,
-      phone: user.phone, role: user.role,
-      roleSpecificData: user.roleSpecificData,
-      isPhoneVerified: true
+      user: sanitizeUser(user)
     });
   } catch (error) {
     console.error('Verify OTP error:', error.message);
-    res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error while verifying OTP' });
   }
 };
 
-// ── Resend OTP ────────────────────────────────────────────────────────────────
 exports.resendOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
-    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
-    const user   = await User.findOne({ phone: digits });
-    if (!user)    return res.status(404).json({ message: 'No account with that number' });
-    if (user.isPhoneVerified) return res.json({ message: 'Phone already verified' });
+    const { email } = req.body;
+    const user = await User.findOne({ email });
 
-    const otp = makeOTP();
-    user.phoneOtp        = otp;
-    user.phoneOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
-    await user.save({ validateBeforeSave: false });
+    if (!user) {
+      return res.status(404).json({ message: 'No account found for this email address' });
+    }
 
-    const sent = await sendSms(digits, `FarmToFork: Your new OTP is ${otp}. Valid for 10 minutes.`);
-    if (!sent) console.log(`🔐 Resend OTP for ${digits}: ${otp}`);
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'This email is already verified' });
+    }
 
-    res.json({ message: 'New OTP sent to your mobile number.' });
+    const lastRequestedAt = user.otpRequestedAt ? user.otpRequestedAt.getTime() : 0;
+    const remainingMs = RESEND_COOLDOWN_MS - (Date.now() - lastRequestedAt);
+
+    if (remainingMs > 0) {
+      return res.status(429).json({
+        message: 'Please wait before requesting another OTP.',
+        retryIn: Math.ceil(remainingMs / 1000)
+      });
+    }
+
+    await sendOtpForUser(user);
+
+    return res.json({
+      message: 'A new OTP has been sent to your email address.',
+      resendAvailableIn: 60
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Resend OTP error:', error.message);
+    return res.status(500).json({ message: 'Server error while resending OTP' });
   }
 };
 
-// ── Login ─────────────────────────────────────────────────────────────────────
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: 'Email and password are required' });
-
     const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password)))
+
+    if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
+    }
 
-    // Block login only if SMS is configured and phone not verified
-    const smsConfigured = !!(process.env.FAST2SMS_API_KEY);
-    if (smsConfigured && !user.isPhoneVerified)
+    if (!user.isVerified) {
       return res.status(403).json({
-        message: 'Please verify your mobile number to continue.',
+        message: 'Please verify your email before logging in.',
         needsVerification: true,
-        phone: user.phone
+        email: user.email
       });
+    }
 
-    res.json({
-      _id: user._id, name: user.name, email: user.email,
-      phone: user.phone, role: user.role,
-      roleSpecificData: user.roleSpecificData,
-      isPhoneVerified: user.isPhoneVerified,
-      token: generateToken(user._id)
+    return res.json({
+      message: 'Login successful',
+      token: generateToken(user._id),
+      user: sanitizeUser(user)
     });
   } catch (error) {
     console.error('Login error:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error while logging in' });
   }
 };
 
-// ── Get Profile ───────────────────────────────────────────────────────────────
-exports.getUserProfile = async (req, res) => {
+exports.getCurrentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    return res.json({ user: sanitizeUser(user) });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    return res.status(500).json({ message: 'Server error while fetching user details' });
   }
 };
+
+exports.cleanupExpiredOtps = async () => {
+  try {
+    await User.updateMany(
+      { otpExpiry: { $lt: new Date() } },
+      { $set: { otp: null, otpExpiry: null } }
+    );
+  } catch (error) {
+    console.error('Expired OTP cleanup error:', error.message);
+  }
+};
+
+function existingAccountMessage(user) {
+  if (user.isVerified) {
+    return 'An account with this email already exists. Please sign in instead.';
+  }
+
+  return 'An account with this email already exists but is not verified yet. Please verify your email or resend the OTP.';
+}

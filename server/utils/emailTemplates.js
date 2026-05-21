@@ -60,6 +60,34 @@ const itemsTable = (items = []) => `
   </tbody>
 </table>`;
 
+exports.verificationOtpEmail = ({ name, otp, brandName = 'FarmToFork', expiryMinutes = 5 }) => ({
+  subject: `${brandName} Email Verification Code`,
+  html: base(`
+    <h2>Verify your email address</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Use the one-time password below to finish setting up your account.</p>
+    <div style="margin: 28px 0; text-align: center;">
+      <div style="display: inline-block; padding: 16px 28px; border-radius: 14px; background: #f1f8e9; border: 1px solid #dce9c5;">
+        <div style="font-size: 12px; letter-spacing: 1px; color: #5f6f52; text-transform: uppercase; margin-bottom: 8px;">Your OTP Code</div>
+        <div style="font-size: 34px; letter-spacing: 8px; font-weight: 700; color: #1f2937;">${otp}</div>
+      </div>
+    </div>
+    <div class="info-box">
+      <p><strong>Brand:</strong> ${brandName}</p>
+      <p><strong>Expires in:</strong> ${expiryMinutes} minutes</p>
+      <p><strong>Security notice:</strong> Never share this code with anyone. Our team will never ask for your OTP.</p>
+    </div>
+    <p>If you did not request this code, you can safely ignore this email.</p>
+  `),
+  text: [
+    `${brandName} email verification`,
+    `Hi ${name || 'there'},`,
+    `Your OTP code is ${otp}.`,
+    `This code expires in ${expiryMinutes} minutes.`,
+    'Never share this code with anyone.'
+  ].join('\n')
+});
+
 // ── Template 1: Customer — order placed ───────────────────────────────────────
 exports.orderPlacedCustomer = (order, customerName, farmerName) => ({
   subject: `✅ Order Confirmed — FarmToFork #${String(order._id).slice(-6).toUpperCase()}`,
