@@ -5,16 +5,9 @@ const normalizeEmail = (value = '') => String(value).trim().toLowerCase();
 const validateEmail = (email) => EMAIL_REGEX.test(normalizeEmail(email));
 
 const validatePassword = (password = '') => {
-  if (typeof password !== 'string' || password.length < 8) {
-    return 'Password must be at least 8 characters long';
+  if (typeof password !== 'string' || password.length < 6) {
+    return 'Password must be at least 6 characters long';
   }
-
-  const hasLetter = /[A-Za-z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  if (!hasLetter || !hasNumber) {
-    return 'Password must contain at least one letter and one number';
-  }
-
   return '';
 };
 

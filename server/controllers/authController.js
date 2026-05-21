@@ -100,8 +100,12 @@ exports.registerUser = async (req, res) => {
         emailSent = true;
       } catch (emailError) {
         console.error('OTP email send error:', emailError.message);
-        // Log OTP to console so dev can test without email
-        console.log(`🔐 OTP for ${user.email}: ${user.otp}`);
+        // Always log OTP so it can be retrieved from Render logs during testing
+        console.log(`\n🔐 ===== OTP FOR TESTING =====`);
+        console.log(`📧 Email: ${user.email}`);
+        console.log(`🔑 OTP:   ${user.otp}`);
+        console.log(`⏰ Expires: ${user.otpExpiry}`);
+        console.log(`==============================\n`);
       }
     } else {
       // No email configured — auto-verify so user isn't blocked

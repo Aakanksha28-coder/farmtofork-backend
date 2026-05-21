@@ -109,6 +109,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug: retrieve OTP for testing when email delivery fails
+// Enable by setting DEBUG_OTP=true on Render, disable in production
+app.get('/debug-otp/:email', async (req, res) => {
+  if (!process.env.DEBUG_OTP) return res.status(404).json({ message: 'Not found' });
+  try {
+    const user = await User.findOne({ email: req.params.email }).select('otp otpExpiry isVerified email');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ email: user.email, otp: user.otp, expires: user.otpExpiry, isVerified: user.isVerified });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
