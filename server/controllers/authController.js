@@ -62,9 +62,20 @@ exports.registerUser = async (req, res) => {
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      if (!existingUser.isVerified) {
+        // Resend OTP and redirect to verify
+        try { await sendOtpForUser(existingUser); } catch (e) { console.error('OTP resend error:', e.message); }
+        return res.status(200).json({
+          message: 'Account exists but not verified. A new OTP has been sent.',
+          email: existingUser.email,
+          requiresVerification: true,
+          resendAvailableIn: 0,
+          user: sanitizeUser(existingUser)
+        });
+      }
       return res.status(409).json({
-        message: existingAccountMessage(existingUser),
-        requiresVerification: !existingUser.isVerified,
+        message: 'An account with this email already exists. Please sign in.',
+        requiresVerification: false,
         email: existingUser.email
       });
     }

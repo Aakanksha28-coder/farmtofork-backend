@@ -131,6 +131,18 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 setInterval(cleanupExpiredOtps, 60 * 1000);
 cleanupExpiredOtps();
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+
+  // Self-ping every 14 minutes to prevent Render free tier cold starts
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  setInterval(() => {
+    fetch(`${SELF_URL}/health`)
+      .then(() => console.log('🏓 Self-ping OK'))
+      .catch(() => {}); // silent fail
+  }, 14 * 60 * 1000);
+});
 
 module.exports = app;
