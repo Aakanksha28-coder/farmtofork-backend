@@ -132,7 +132,6 @@ const PORT = process.env.PORT || 5000;
 setInterval(cleanupExpiredOtps, 60 * 1000);
 cleanupExpiredOtps();
 
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
