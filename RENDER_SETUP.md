@@ -82,7 +82,7 @@ DATA_GOV_API_KEY=579b464db66ec23bdd00000134def222aee64b8c4c651e16b6397a35
 
 # Required - Brevo email (OTP + order notifications)
 BREVO_API_KEY=your_brevo_v3_api_key
-EMAIL_FROM=FarmToFork <your-verified@gmail.com>
+EMAIL_FROM=Farm to Fork <farmtofork291@gmail.com>
 FRONTEND_URL=https://farmtofork-frontend.vercel.app
 
 # Optional - Port (Render sets this automatically)
@@ -91,9 +91,13 @@ PORT=5000
 
 **Brevo setup (required for OTP):**
 1. Sign up at https://app.brevo.com
-2. **Senders & IPs → Senders** — verify the same email used in `EMAIL_FROM`
-3. **SMTP & API → API Keys** — create a key and paste into `BREVO_API_KEY`
-4. After deploy, open `https://your-backend.onrender.com/health` — `email` should be `"configured"`
+2. **Senders & IPs → Senders** — verify `farmtofork291@gmail.com`
+3. **SMTP & API → API Keys** — create a key and paste into `BREVO_API_KEY` on Render
+4. **Security → Authorized IPs** — turn OFF “Restrict API access” (or Render will get 502 errors)
+5. Render env:
+   - `BREVO_API_KEY` = your xkeysib-... key
+   - `EMAIL_FROM` = `Farm to Fork <farmtofork291@gmail.com>` (space before `<` is OK)
+6. After deploy, open `https://your-backend.onrender.com/health` — `email` should be `"ready"`
 
 6. Click **"Save Changes"**
 

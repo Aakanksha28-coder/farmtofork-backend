@@ -39,7 +39,7 @@ Get from: https://data.gov.in/
 ### 5. Email — Brevo only (OTP verification + all order notifications)
 ```
 BREVO_API_KEY=your_brevo_api_key
-EMAIL_FROM=FarmToFork <your-verified-sender@gmail.com>
+EMAIL_FROM=Farm to Fork <farmtofork291@gmail.com>
 FRONTEND_URL=https://your-frontend.onrender.com
 ```
 Get the API key at [Brevo](https://app.brevo.com) → SMTP & API → API Keys. Verify the sender email under Senders & IPs.

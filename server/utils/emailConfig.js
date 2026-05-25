@@ -11,10 +11,11 @@ const parseEmailFrom = () => {
   const fromEnv =
     process.env.EMAIL_FROM ||
     (process.env.EMAIL_USER ? `FarmToFork <${process.env.EMAIL_USER}>` : '') ||
-    'FarmToFork <farmtofork291@gmail.com>';
+    'Farm to Fork <farmtofork291@gmail.com>';
 
   const raw = fromEnv.replace(/^["']|["']$/g, '').trim();
-  const match = raw.match(/^(.*?)\s*<([^>]+)>$/);
+  // Supports "Name <email>" and "Name<email>"
+  const match = raw.match(/^(.+?)\s*<([^>]+)>$/);
 
   if (match) {
     return { name: match[1].trim() || 'FarmToFork', email: match[2].trim().toLowerCase() };
@@ -32,6 +33,9 @@ const parseEmailFrom = () => {
 const friendlyEmailError = (errMessage = '') => {
   const msg = String(errMessage);
 
+  if (/unrecognised ip|unauthorized ip|authorised_ips|authorized_ips/i.test(msg)) {
+    return 'Brevo is blocking this server IP. In Brevo go to Security → Authorized IPs and disable restriction, or allow Render server IPs.';
+  }
   if (/key not found|unauthorized|invalid.*key|401/i.test(msg)) {
     return 'Email API key is invalid. In Brevo go to SMTP & API → API Keys, create a new v3 key, and set BREVO_API_KEY on Render.';
   }
@@ -81,10 +85,15 @@ const brevoGet = (path, apiKey) =>
       .on('error', reject);
   });
 
+let lastBrevoStatus = 'unknown';
+
+const getBrevoStatus = () => lastBrevoStatus;
+
 /** Call on startup to catch bad API keys early. */
 const validateBrevoOnStartup = async () => {
   const apiKey = getBrevoApiKey();
   if (!apiKey) {
+    lastBrevoStatus = 'missing';
     console.warn('⚠️  BREVO_API_KEY not set — OTP emails will not work');
     return false;
   }
@@ -92,13 +101,27 @@ const validateBrevoOnStartup = async () => {
   const sender = parseEmailFrom();
   try {
     await brevoGet('/v3/account', apiKey);
-    console.log(`✅ Brevo API key valid — sender: ${sender.email}`);
+    lastBrevoStatus = 'ready';
+    console.log(`✅ Brevo API key valid — sender: ${sender.name} <${sender.email}>`);
     return true;
   } catch (err) {
-    console.error(`❌ Brevo API key check failed: ${err.message}`);
-    console.error('   Create a new key at https://app.brevo.com → SMTP & API → API Keys');
+    lastBrevoStatus = getBrevoErrorType(err.message);
+    const msg = err.message || '';
+    if (/unrecognised ip|authorised_ips|authorized_ips/i.test(msg)) {
+      console.error('❌ Brevo blocked server IP — disable Authorized IPs: https://app.brevo.com/security/authorised_ips');
+    } else {
+      console.error(`❌ Brevo API key check failed: ${msg}`);
+      console.error('   Create a new key at https://app.brevo.com → SMTP & API → API Keys');
+    }
     return false;
   }
+};
+
+const getBrevoErrorType = (errMessage = '') => {
+  const msg = String(errMessage);
+  if (/unrecognised ip|authorised_ips|authorized_ips/i.test(msg)) return 'ip_blocked';
+  if (/key not found|unauthorized|invalid.*key/i.test(msg)) return 'invalid_key';
+  return 'error';
 };
 
 module.exports = {
@@ -106,5 +129,7 @@ module.exports = {
   isEmailConfigured,
   parseEmailFrom,
   friendlyEmailError,
-  validateBrevoOnStartup
+  validateBrevoOnStartup,
+  getBrevoErrorType,
+  getBrevoStatus
 };

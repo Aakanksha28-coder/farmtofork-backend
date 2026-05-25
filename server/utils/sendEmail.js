@@ -1,6 +1,6 @@
 /**
  * All outbound email via Brevo Transactional API.
- * Env: BREVO_API_KEY, EMAIL_FROM="FarmToFork <verified@email.com>"
+ * Env: BREVO_API_KEY, EMAIL_FROM="Farm to Fork <farmtofork291@gmail.com>"
  */
 
 const https = require('https');

@@ -10,7 +10,12 @@ const { cleanupExpiredOtps } = require('./controllers/authController');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
-const { isEmailConfigured, parseEmailFrom, validateBrevoOnStartup } = require('./utils/emailConfig');
+const {
+  isEmailConfigured,
+  parseEmailFrom,
+  validateBrevoOnStartup,
+  getBrevoStatus
+} = require('./utils/emailConfig');
 const sender = parseEmailFrom();
 
 console.log('🚀 Starting Farm to Fork Backend...');
@@ -126,10 +131,17 @@ app.get('/health', async (req, res) => {
     brevoKeyValid = keyValid;
   }
 
+  const emailStatus = !isEmailConfigured()
+    ? 'missing'
+    : keyValid
+      ? 'ready'
+      : getBrevoStatus();
+
   res.json({
     status: 'ok',
-    email: isEmailConfigured() ? (keyValid ? 'ready' : 'invalid_key') : 'missing',
+    email: emailStatus,
     sender: isEmailConfigured() ? sender.email : null,
+    senderName: isEmailConfigured() ? sender.name : null,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
