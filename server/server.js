@@ -8,9 +8,12 @@ const { cleanupExpiredOtps } = require('./controllers/authController');
 // Load env vars
 dotenv.config();
 
+const { isEmailConfigured } = require('./utils/emailConfig');
+
 console.log('🚀 Starting Farm to Fork Backend...');
 console.log(`📦 Node Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔑 Environment Variables Loaded: ${Object.keys(process.env).length}`);
+console.log(`📧 Brevo email: ${isEmailConfigured() ? 'configured' : 'NOT configured (set BREVO_API_KEY)'}`);
 
 // Connect to database
 connectDB();

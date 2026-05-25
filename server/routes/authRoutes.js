@@ -8,7 +8,7 @@ const {
   resendOtp
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
-const otpRateLimit = require('../middleware/otpRateLimit');
+const { registerRateLimit, resendOtpRateLimit } = require('../middleware/otpRateLimit');
 const {
   registerValidator,
   loginValidator,
@@ -16,9 +16,9 @@ const {
   otpVerificationValidator
 } = require('../middleware/validateAuthInput');
 
-router.post('/register', registerValidator, otpRateLimit, registerUser);
+router.post('/register', registerValidator, registerRateLimit, registerUser);
 router.post('/verify-otp', otpVerificationValidator, verifyOtp);
-router.post('/resend-otp', otpEmailValidator, otpRateLimit, resendOtp);
+router.post('/resend-otp', otpEmailValidator, resendOtpRateLimit, resendOtp);
 router.post('/login', loginValidator, loginUser);
 router.get('/me', protect, getCurrentUser);
 router.get('/profile', protect, getCurrentUser);

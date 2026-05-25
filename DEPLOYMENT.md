@@ -36,7 +36,20 @@ DATA_GOV_API_KEY=your_data_gov_in_api_key
 ```
 Get from: https://data.gov.in/
 
-### 5. Port (Render sets this automatically)
+### 5. Email — Brevo only (OTP verification + all order notifications)
+```
+BREVO_API_KEY=your_brevo_api_key
+EMAIL_FROM=FarmToFork <your-verified-sender@gmail.com>
+FRONTEND_URL=https://your-frontend.onrender.com
+```
+Get the API key at [Brevo](https://app.brevo.com) → SMTP & API → API Keys. Verify the sender email under Senders & IPs.
+
+Emails sent automatically:
+- Signup / resend OTP (6-digit code)
+- Customer: order placed, every status change
+- Farmer: new order, delivered/received updates
+
+### 6. Port (Render sets this automatically)
 ```
 PORT=5000
 ```

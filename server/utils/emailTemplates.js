@@ -90,7 +90,7 @@ exports.verificationOtpEmail = ({ name, otp, brandName = 'FarmToFork', expiryMin
 
 // ── Template 1: Customer — order placed ───────────────────────────────────────
 exports.orderPlacedCustomer = (order, customerName, farmerName) => ({
-  subject: `✅ Order Confirmed — FarmToFork #${String(order._id).slice(-6).toUpperCase()}`,
+  subject: `✅ Order Placed — FarmToFork #${String(order._id).slice(-6).toUpperCase()}`,
   html: base(`
     <h2>Hi ${customerName}, your order is confirmed! 🎉</h2>
     <div class="info-box">

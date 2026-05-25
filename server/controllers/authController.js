@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const { isEmailConfigured } = require('../utils/emailConfig');
 const { verificationOtpEmail } = require('../utils/emailTemplates');
 
-const OTP_EXPIRY_MS = 5 * 60 * 1000;
-const RESEND_COOLDOWN_MS = 60 * 1000;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 30 * 1000;
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET || 'your_jwt_secret', {
@@ -35,7 +36,19 @@ const createLocationPayload = ({ lat, lng }) => {
   return { type: 'Point', coordinates: [parsedLng, parsedLat] };
 };
 
+const logOtpForOps = (user) => {
+  console.log('\n🔐 ===== OTP FOR TESTING =====');
+  console.log(`📧 Email: ${user.email}`);
+  console.log(`🔑 OTP:   ${user.otp}`);
+  console.log(`⏰ Expires: ${user.otpExpiry}`);
+  console.log('==============================\n');
+};
+
 const sendOtpForUser = async (user) => {
+  if (!isEmailConfigured()) {
+    throw new Error('Email service is not configured (set BREVO_API_KEY on the server)');
+  }
+
   const otp = generateOtp();
   user.otp = otp;
   user.otpExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
@@ -46,10 +59,15 @@ const sendOtpForUser = async (user) => {
     name: user.name,
     otp,
     brandName: process.env.BRAND_NAME || 'FarmToFork',
-    expiryMinutes: 5
+    expiryMinutes: 10
   });
 
-  await sendEmail(user.email, template.subject, template.html, template.text);
+  try {
+    await sendEmail(user.email, template.subject, template.html, template.text, { required: true });
+  } catch (err) {
+    logOtpForOps(user);
+    throw err;
+  }
 };
 
 exports.registerUser = async (req, res) => {
@@ -65,11 +83,14 @@ exports.registerUser = async (req, res) => {
       if (!existingUser.isVerified) {
         // Resend OTP and redirect to verify
         try { await sendOtpForUser(existingUser); } catch (e) { console.error('OTP resend error:', e.message); }
+        const resent = isEmailConfigured();
         return res.status(200).json({
-          message: 'Account exists but not verified. A new OTP has been sent.',
+          message: resent
+            ? 'Account exists but not verified. A new OTP has been sent.'
+            : 'Account exists but not verified. Email is not configured — contact support.',
           email: existingUser.email,
           requiresVerification: true,
-          resendAvailableIn: 0,
+          resendAvailableIn: resent ? 30 : 0,
           user: sanitizeUser(existingUser)
         });
       }
@@ -91,40 +112,28 @@ exports.registerUser = async (req, res) => {
       isVerified: false
     });
 
-    const emailConfigured = !!(process.env.RESEND_API_KEY);
-    let emailSent = false;
+    if (!isEmailConfigured()) {
+      await User.findByIdAndDelete(user._id);
+      return res.status(503).json({
+        message: 'Email verification is not available. Please try again later.'
+      });
+    }
 
-    if (emailConfigured) {
-      try {
-        await sendOtpForUser(user);
-        emailSent = true;
-      } catch (emailError) {
-        console.error('OTP email send error:', emailError.message);
-        // Always log OTP so it can be retrieved from Render logs during testing
-        console.log(`\n🔐 ===== OTP FOR TESTING =====`);
-        console.log(`📧 Email: ${user.email}`);
-        console.log(`🔑 OTP:   ${user.otp}`);
-        console.log(`⏰ Expires: ${user.otpExpiry}`);
-        console.log(`==============================\n`);
-      }
-    } else {
-      // No email configured — auto-verify so user isn't blocked
-      console.log(`🔐 No email configured. OTP for ${user.email}: auto-verified`);
-      user.isVerified = true;
-      user.otp = null;
-      user.otpExpiry = null;
-      await user.save({ validateBeforeSave: false });
+    let emailSent = false;
+    try {
+      await sendOtpForUser(user);
+      emailSent = true;
+    } catch (emailError) {
+      console.error('OTP email send error:', emailError.message);
     }
 
     return res.status(201).json({
       message: emailSent
         ? 'Account created! Check your inbox for the 6-digit verification code.'
-        : emailConfigured
-          ? 'Account created. OTP email failed — use Resend OTP.'
-          : 'Account created successfully!',
+        : 'Account created. OTP email failed — use Resend OTP.',
       email: user.email,
       requiresVerification: !user.isVerified,
-      resendAvailableIn: 60,
+      resendAvailableIn: emailSent ? 30 : 0,
       user: sanitizeUser(user)
     });
   } catch (error) {
@@ -195,13 +204,20 @@ exports.resendOtp = async (req, res) => {
       return res.status(400).json({ message: 'This email is already verified' });
     }
 
+    if (!isEmailConfigured()) {
+      return res.status(503).json({
+        message: 'Email delivery is not configured. Please contact support.'
+      });
+    }
+
     const lastRequestedAt = user.otpRequestedAt ? user.otpRequestedAt.getTime() : 0;
     const remainingMs = RESEND_COOLDOWN_MS - (Date.now() - lastRequestedAt);
 
     if (remainingMs > 0) {
+      const retryIn = Math.ceil(remainingMs / 1000);
       return res.status(429).json({
-        message: 'Please wait before requesting another OTP.',
-        retryIn: Math.ceil(remainingMs / 1000)
+        message: `Please wait ${retryIn} seconds before requesting another OTP.`,
+        retryIn
       });
     }
 
@@ -209,11 +225,16 @@ exports.resendOtp = async (req, res) => {
 
     return res.json({
       message: 'A new OTP has been sent to your email address.',
-      resendAvailableIn: 60
+      resendAvailableIn: 30
     });
   } catch (error) {
     console.error('Resend OTP error:', error.message);
-    return res.status(500).json({ message: 'Server error while resending OTP' });
+    const isEmailFailure = /brevo|email|sender|api-key|configured/i.test(error.message || '');
+    return res.status(isEmailFailure ? 502 : 500).json({
+      message: isEmailFailure
+        ? 'Could not send the verification email. Please try again in a moment.'
+        : 'Server error while resending OTP'
+    });
   }
 };
 
@@ -268,10 +289,3 @@ exports.cleanupExpiredOtps = async () => {
   }
 };
 
-function existingAccountMessage(user) {
-  if (user.isVerified) {
-    return 'An account with this email already exists. Please sign in instead.';
-  }
-
-  return 'An account with this email already exists but is not verified yet. Please verify your email or resend the OTP.';
-}
