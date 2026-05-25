@@ -83,7 +83,7 @@ DATA_GOV_API_KEY=579b464db66ec23bdd00000134def222aee64b8c4c651e16b6397a35
 # Required - Brevo email (OTP + order notifications)
 BREVO_API_KEY=your_brevo_v3_api_key
 EMAIL_FROM=Farm to Fork <farmtofork291@gmail.com>
-FRONTEND_URL=https://farmtofork-frontend.vercel.app
+FRONTEND_URL=https://farmtofork-frontend.onrender.com
 
 # Optional - Port (Render sets this automatically)
 PORT=5000
