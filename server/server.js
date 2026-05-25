@@ -10,15 +10,17 @@ const { cleanupExpiredOtps } = require('./controllers/authController');
 dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
-const { isEmailConfigured, parseEmailFrom } = require('./utils/emailConfig');
+const { isEmailConfigured, parseEmailFrom, validateBrevoOnStartup } = require('./utils/emailConfig');
 const sender = parseEmailFrom();
 
 console.log('🚀 Starting Farm to Fork Backend...');
 console.log(`📦 Node Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔑 Environment Variables Loaded: ${Object.keys(process.env).length}`);
 console.log(
-  `📧 Brevo: ${isEmailConfigured() ? `configured, sender ${sender.email}` : 'NOT configured — set BREVO_API_KEY + EMAIL_FROM on Render'}`
+  `📧 Brevo: ${isEmailConfigured() ? `configured, sender ${sender.email}` : 'NOT configured — set BREVO_API_KEY on Render'}`
 );
+
+validateBrevoOnStartup().catch(() => {});
 
 // Connect to database
 connectDB();
@@ -108,10 +110,25 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+let brevoKeyValid = null;
+validateBrevoOnStartup()
+  .then((ok) => {
+    brevoKeyValid = ok;
+  })
+  .catch(() => {
+    brevoKeyValid = false;
+  });
+
+app.get('/health', async (req, res) => {
+  let keyValid = brevoKeyValid;
+  if (keyValid === null && isEmailConfigured()) {
+    keyValid = await validateBrevoOnStartup().catch(() => false);
+    brevoKeyValid = keyValid;
+  }
+
   res.json({
     status: 'ok',
-    email: isEmailConfigured() ? 'configured' : 'missing',
+    email: isEmailConfigured() ? (keyValid ? 'ready' : 'invalid_key') : 'missing',
     sender: isEmailConfigured() ? sender.email : null,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()

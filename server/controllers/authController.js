@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
-const { isEmailConfigured } = require('../utils/emailConfig');
+const { isEmailConfigured, friendlyEmailError } = require('../utils/emailConfig');
 const { verificationOtpEmail } = require('../utils/emailTemplates');
 
 const OTP_EXPIRY_MS = 10 * 60 * 1000;
@@ -155,8 +155,7 @@ exports.registerUser = async (req, res) => {
       console.error('OTP email send error:', emailError.message);
       logOtpForOps(user);
       return res.status(502).json({
-        message:
-          'Account created but the verification email could not be sent. Check Brevo sender settings or use Resend OTP.',
+        message: friendlyEmailError(emailError.message),
         email: user.email,
         requiresVerification: true,
         resendAvailableIn: 0,
@@ -261,9 +260,7 @@ exports.resendOtp = async (req, res) => {
       error.message || ''
     );
     return res.status(isEmailFailure ? 502 : 500).json({
-      message: isEmailFailure
-        ? `Could not send email: ${error.message}. Ensure BREVO_API_KEY and a verified EMAIL_FROM are set on Render.`
-        : 'Server error while resending OTP'
+      message: isEmailFailure ? friendlyEmailError(error.message) : 'Server error while resending OTP'
     });
   }
 };
