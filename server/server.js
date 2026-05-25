@@ -1,19 +1,24 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const morgan = require('morgan');
 const { cleanupExpiredOtps } = require('./controllers/authController');
 
-// Load env vars
+// Load .env from backend root (works locally and on Render)
+dotenv.config({ path: path.join(__dirname, '../.env') });
 dotenv.config();
 
-const { isEmailConfigured } = require('./utils/emailConfig');
+const { isEmailConfigured, parseEmailFrom } = require('./utils/emailConfig');
+const sender = parseEmailFrom();
 
 console.log('🚀 Starting Farm to Fork Backend...');
 console.log(`📦 Node Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`🔑 Environment Variables Loaded: ${Object.keys(process.env).length}`);
-console.log(`📧 Brevo email: ${isEmailConfigured() ? 'configured' : 'NOT configured (set BREVO_API_KEY)'}`);
+console.log(
+  `📧 Brevo: ${isEmailConfigured() ? `configured, sender ${sender.email}` : 'NOT configured — set BREVO_API_KEY + EMAIL_FROM on Render'}`
+);
 
 // Connect to database
 connectDB();
@@ -71,7 +76,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Static uploads
-const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -105,8 +109,10 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
+    email: isEmailConfigured() ? 'configured' : 'missing',
+    sender: isEmailConfigured() ? sender.email : null,
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });

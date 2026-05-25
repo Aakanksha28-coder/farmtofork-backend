@@ -44,6 +44,12 @@ const logOtpForOps = (user) => {
   console.log('==============================\n');
 };
 
+const canResendOtp = (user) => {
+  const last = user.otpRequestedAt ? user.otpRequestedAt.getTime() : 0;
+  if (!last) return true;
+  return Date.now() - last >= RESEND_COOLDOWN_MS;
+};
+
 const sendOtpForUser = async (user) => {
   if (!isEmailConfigured()) {
     throw new Error('Email service is not configured (set BREVO_API_KEY on the server)');
@@ -53,7 +59,6 @@ const sendOtpForUser = async (user) => {
   user.otp = otp;
   user.otpExpiry = new Date(Date.now() + OTP_EXPIRY_MS);
   user.otpRequestedAt = new Date();
-  await user.save({ validateBeforeSave: false });
 
   const template = verificationOtpEmail({
     name: user.name,
@@ -62,12 +67,17 @@ const sendOtpForUser = async (user) => {
     expiryMinutes: 10
   });
 
-  try {
-    await sendEmail(user.email, template.subject, template.html, template.text, { required: true });
-  } catch (err) {
-    logOtpForOps(user);
-    throw err;
+  // Send first — only persist OTP if Brevo accepts the message
+  await sendEmail(user.email, template.subject, template.html, template.text, { required: true });
+  await user.save({ validateBeforeSave: false });
+};
+
+const trySendOtp = async (user) => {
+  if (!canResendOtp(user)) {
+    return { sent: false, retryIn: Math.ceil((RESEND_COOLDOWN_MS - (Date.now() - user.otpRequestedAt.getTime())) / 1000) };
   }
+  await sendOtpForUser(user);
+  return { sent: true, retryIn: 30 };
 };
 
 exports.registerUser = async (req, res) => {
@@ -81,16 +91,29 @@ exports.registerUser = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       if (!existingUser.isVerified) {
-        // Resend OTP and redirect to verify
-        try { await sendOtpForUser(existingUser); } catch (e) { console.error('OTP resend error:', e.message); }
-        const resent = isEmailConfigured();
+        if (!isEmailConfigured()) {
+          return res.status(503).json({
+            message: 'Email verification is not configured on the server.',
+            email: existingUser.email,
+            requiresVerification: true
+          });
+        }
+
+        let otpResult = { sent: false, retryIn: 0 };
+        try {
+          otpResult = await trySendOtp(existingUser);
+        } catch (e) {
+          console.error('OTP resend error:', e.message);
+          logOtpForOps(existingUser);
+        }
+
         return res.status(200).json({
-          message: resent
-            ? 'Account exists but not verified. A new OTP has been sent.'
-            : 'Account exists but not verified. Email is not configured — contact support.',
+          message: otpResult.sent
+            ? 'Account exists but not verified. A new OTP has been sent to your email.'
+            : 'Account exists but not verified. Use Resend OTP on the verification page.',
           email: existingUser.email,
           requiresVerification: true,
-          resendAvailableIn: resent ? 30 : 0,
+          resendAvailableIn: otpResult.sent ? otpResult.retryIn : otpResult.retryIn || 30,
           user: sanitizeUser(existingUser)
         });
       }
@@ -119,23 +142,27 @@ exports.registerUser = async (req, res) => {
       });
     }
 
-    let emailSent = false;
     try {
       await sendOtpForUser(user);
-      emailSent = true;
+      return res.status(201).json({
+        message: 'Account created! Check your inbox (and spam) for the 6-digit verification code.',
+        email: user.email,
+        requiresVerification: true,
+        resendAvailableIn: 30,
+        user: sanitizeUser(user)
+      });
     } catch (emailError) {
       console.error('OTP email send error:', emailError.message);
+      logOtpForOps(user);
+      return res.status(502).json({
+        message:
+          'Account created but the verification email could not be sent. Check Brevo sender settings or use Resend OTP.',
+        email: user.email,
+        requiresVerification: true,
+        resendAvailableIn: 0,
+        user: sanitizeUser(user)
+      });
     }
-
-    return res.status(201).json({
-      message: emailSent
-        ? 'Account created! Check your inbox for the 6-digit verification code.'
-        : 'Account created. OTP email failed — use Resend OTP.',
-      email: user.email,
-      requiresVerification: !user.isVerified,
-      resendAvailableIn: emailSent ? 30 : 0,
-      user: sanitizeUser(user)
-    });
   } catch (error) {
     console.error('Register error:', error.message);
     if (error.code === 11000) {
@@ -224,15 +251,18 @@ exports.resendOtp = async (req, res) => {
     await sendOtpForUser(user);
 
     return res.json({
-      message: 'A new OTP has been sent to your email address.',
+      message: 'A new OTP has been sent to your email. Check your spam folder if you do not see it.',
       resendAvailableIn: 30
     });
   } catch (error) {
     console.error('Resend OTP error:', error.message);
-    const isEmailFailure = /brevo|email|sender|api-key|configured/i.test(error.message || '');
+
+    const isEmailFailure = /brevo|email|sender|api|key|configured|invalid|not activated/i.test(
+      error.message || ''
+    );
     return res.status(isEmailFailure ? 502 : 500).json({
       message: isEmailFailure
-        ? 'Could not send the verification email. Please try again in a moment.'
+        ? `Could not send email: ${error.message}. Ensure BREVO_API_KEY and a verified EMAIL_FROM are set on Render.`
         : 'Server error while resending OTP'
     });
   }
@@ -248,10 +278,23 @@ exports.loginUser = async (req, res) => {
     }
 
     if (!user.isVerified) {
+      let otpResult = { sent: false, retryIn: 30 };
+      if (isEmailConfigured()) {
+        try {
+          otpResult = await trySendOtp(user);
+        } catch (e) {
+          console.error('Login OTP send error:', e.message);
+          logOtpForOps(user);
+        }
+      }
+
       return res.status(403).json({
-        message: 'Please verify your email before logging in.',
+        message: otpResult.sent
+          ? 'Please verify your email. A new verification code was sent to your inbox.'
+          : 'Please verify your email before logging in.',
         needsVerification: true,
-        email: user.email
+        email: user.email,
+        resendAvailableIn: otpResult.retryIn
       });
     }
 
