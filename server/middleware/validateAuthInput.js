@@ -11,8 +11,12 @@ const validatePassword = (password = '') => {
   return '';
 };
 
+const normalizePhone = (value = '') => String(value).replace(/\D/g, '').slice(-10);
+
+const validatePhone = (phone = '') => /^[6-9]\d{9}$/.test(normalizePhone(phone));
+
 const registerValidator = (req, res, next) => {
-  const { name = '', email = '', password = '', confirmPassword = '' } = req.body;
+  const { name = '', email = '', password = '', confirmPassword = '', phone = '' } = req.body;
 
   if (!String(name).trim()) {
     return res.status(400).json({ message: 'Name is required' });
@@ -20,6 +24,10 @@ const registerValidator = (req, res, next) => {
 
   if (!validateEmail(email)) {
     return res.status(400).json({ message: 'Please provide a valid email address' });
+  }
+
+  if (!validatePhone(phone)) {
+    return res.status(400).json({ message: 'Please provide a valid 10-digit phone number' });
   }
 
   const passwordError = validatePassword(password);
@@ -37,6 +45,7 @@ const registerValidator = (req, res, next) => {
 
   req.body.email = normalizeEmail(email);
   req.body.name = String(name).trim();
+  req.body.phone = normalizePhone(phone);
   next();
 };
 

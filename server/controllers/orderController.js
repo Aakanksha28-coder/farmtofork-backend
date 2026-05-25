@@ -12,7 +12,8 @@ const {
 // POST /api/orders
 exports.createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod = 'cod', shippingPrice = 0 } = req.body;
+    const { items, shippingAddress, shippingPrice = 0 } = req.body;
+    const paymentMethod = 'cod';
     if (!items || !Array.isArray(items) || items.length === 0)
       return res.status(400).json({ message: 'No items in order' });
 
